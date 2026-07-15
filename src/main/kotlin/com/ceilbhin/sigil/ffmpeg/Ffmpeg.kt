@@ -1,4 +1,4 @@
-package com.ceilbhin.sigil.util
+package com.ceilbhin.sigil.ffmpeg
 
 import ws.schild.jave.process.ProcessLocator
 import ws.schild.jave.process.ffmpeg.DefaultFFMPEGLocator

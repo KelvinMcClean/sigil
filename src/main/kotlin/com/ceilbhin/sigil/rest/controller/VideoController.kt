@@ -3,8 +3,8 @@ package com.ceilbhin.sigil.rest.controller
 import com.ceilbhin.sigil.rest.status.JobStatus
 import com.ceilbhin.sigil.rest.status.StatusEnum
 import com.ceilbhin.sigil.rest.status.StatusTracker
-import com.ceilbhin.sigil.service.FileService
-import com.ceilbhin.sigil.service.VideoService
+import com.ceilbhin.sigil.files.FileService
+import com.ceilbhin.sigil.media.VideoService
 import lombok.Getter
 import org.springframework.http.ResponseEntity
 import org.springframework.http.ResponseEntity.*

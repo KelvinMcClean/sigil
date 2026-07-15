@@ -24,4 +24,9 @@ sigil:
     location:
       x: "w-tw-20"
       y: "h-th-20"
+  media:
+    base-dir: "D:/Media/test/"
+    sub-dir-pattern: "yyyy"
+    filename: "yyyy.MM.dd {title}"
+    default-title: "export"
 

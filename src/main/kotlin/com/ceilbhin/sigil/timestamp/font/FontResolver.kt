@@ -10,7 +10,7 @@ import java.util.*
 class FontResolver {
 
     val BUNDLED_FONT_RESOURCE: String = "/fonts/RealVhsFont-Normalised.ttf"
-    val EXTRACTED_FONT_NAME: String = "app-default-font.ttf"
+    val EXTRACTED_FONT_NAME: String = "app-font.ttf"
 
     /**
      * Guarantees a font is available for FFmpeg.

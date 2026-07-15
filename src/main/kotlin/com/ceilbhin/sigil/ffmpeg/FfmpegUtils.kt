@@ -1,4 +1,4 @@
-package com.ceilbhin.sigil.util
+package com.ceilbhin.sigil.ffmpeg
 
 import com.ceilbhin.sigil.rest.status.StatusMapper
 import java.io.File

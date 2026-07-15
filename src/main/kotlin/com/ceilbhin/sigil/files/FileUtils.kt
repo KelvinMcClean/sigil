@@ -1,4 +1,4 @@
-package com.ceilbhin.sigil.util
+package com.ceilbhin.sigil.files
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.web.multipart.MultipartFile
@@ -7,7 +7,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-
 
 class FileUtils {
     companion object {
@@ -60,25 +59,9 @@ class FileUtils {
 
         fun cleanupTempFiles(tmpDir: String, jobId: String, fileCount: Int, includeFinalOutput: Boolean) {
             try {
-                // Delete original and processed clips, plus motion vector files
                 logger.info { "Cleaning up temporary files for job: $jobId" }
-                for (i in 0..<fileCount) {
-                    logger.debug { "Cleaning temporary file with path: $tmpDir/${jobId}_input_$i.mp4" }
-                    Files.deleteIfExists(Paths.get(tmpDir + "/"+ jobId + "_input_" + i + ".mp4"))
-                    Files.deleteIfExists(Paths.get(tmpDir +"/"+ jobId + "_processed_" + i + ".mp4"))
-                    Files.deleteIfExists(Paths.get(tmpDir +"/"+ jobId + "_transforms_" + i + ".trf"))
-                }
+                Files.deleteIfExists(Paths.get(tmpDir))
                 logger.info { "Intermediary temporary files cleaned for job $jobId" }
-
-                // Delete the concatenation list
-                Files.deleteIfExists(Paths.get(tmpDir +"/"+ jobId + "_fileList.txt"))
-
-                logger.info { "Finished cleaning file list for job $jobId" }
-                // Delete final output only if the job failed or after the user downloads it
-                if (includeFinalOutput) {
-                    Files.deleteIfExists(Paths.get(tmpDir +"/"+ jobId + "_final_output.mp4"))
-                    logger.info { "Finished cleaning final output for job: $jobId" }
-                }
             } catch (e: IOException) {
                 // Log the warning, but don't crash the thread over a missed cleanup
                 System.err.println("Failed to clean up some temporary files for job " + jobId + ": " + e.message)

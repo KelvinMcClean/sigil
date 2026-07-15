@@ -1,20 +1,17 @@
-package com.ceilbhin.sigil.service
+package com.ceilbhin.sigil.media
 
-import com.ceilbhin.sigil.timestamp.font.FontResolver
+import com.ceilbhin.sigil.ffmpeg.FfmpegUtils
+import com.ceilbhin.sigil.files.FileUtils
 import com.ceilbhin.sigil.rest.status.StatusEnum
 import com.ceilbhin.sigil.rest.status.StatusMapper
 import com.ceilbhin.sigil.rest.status.StatusTracker
 import com.ceilbhin.sigil.timestamp.TimestampService
-import com.ceilbhin.sigil.util.FfmpegUtils
-import com.ceilbhin.sigil.util.FileUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.io.IOException
-import java.nio.file.Paths
-
 
 @Service
 class VideoService(val statusTracker: StatusTracker, val timestampService: TimestampService) {
@@ -38,25 +35,6 @@ class VideoService(val statusTracker: StatusTracker, val timestampService: Times
             val tmpDir = FileUtils.getTmpDir(jobId)
             logger.error(e) { "Error processing concatenation" }
             FileUtils.cleanupTempFiles(tmpDir, jobId, files.size, false);
-        }
-    }
-
-    private fun concat(jobId: String, files: Array<MultipartFile>, workingDir: File, statusMapper: StatusMapper) {
-
-        val concatFile = FileUtils.createConcatPath(workingDir.toPath(), jobId, files.size)
-        val finalOutputFilePath = workingDir.toPath().resolve( jobId + "_final_output.mp4").toString()
-        logger.info { "Final output file path: $finalOutputFilePath" }
-        // The final concatenation command
-        val exitCode = FfmpegUtils.concat(concatFile, finalOutputFilePath, statusMapper, workingDir)
-        logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
-
-        if (exitCode == 0) {
-            // Success! Proceed to make the file available for download and trigger cleanup
-            completeJob(workingDir.toPath().toString(), jobId, finalOutputFilePath, files.size)
-            statusMapper.setStatus(StatusEnum.COMPLETED, message = "Video processing completed successfully. Output: ${finalOutputFilePath.replace("\\\\", "\\")}")
-        } else {
-            statusMapper.setStatus(StatusEnum.FAILED, message = "FFmpeg concatenation failed", error = RuntimeException("FFmpeg concatenation failed with exit code: $exitCode"))
-            throw RuntimeException("FFmpeg concatenation failed with exit code: $exitCode")
         }
     }
 
@@ -96,6 +74,25 @@ class VideoService(val statusTracker: StatusTracker, val timestampService: Times
             logger.info { "Processing render for file: ${file.originalFilename}" }
             FfmpegUtils.preprocess(filterGraph, inputFilePath, outputFilePath, workingDir)
             logger.info { "Completed render for file: ${file.originalFilename}" }
+        }
+    }
+
+    private fun concat(jobId: String, files: Array<MultipartFile>, workingDir: File, statusMapper: StatusMapper) {
+
+        val concatFile = FileUtils.createConcatPath(workingDir.toPath(), jobId, files.size)
+        val finalOutputFilePath = workingDir.toPath().resolve( jobId + "_final_output.mp4").toString()
+        logger.info { "Final output file path: $finalOutputFilePath" }
+        // The final concatenation command
+        val exitCode = FfmpegUtils.concat(concatFile, finalOutputFilePath, statusMapper, workingDir)
+        logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
+
+        if (exitCode == 0) {
+            // Success! Proceed to make the file available for download and trigger cleanup
+            completeJob(workingDir.toPath().toString(), jobId, finalOutputFilePath, files.size)
+            statusMapper.setStatus(StatusEnum.COMPLETED, message = "Video processing completed successfully. Output: ${finalOutputFilePath.replace("\\\\", "\\")}")
+        } else {
+            statusMapper.setStatus(StatusEnum.FAILED, message = "FFmpeg concatenation failed", error = RuntimeException("FFmpeg concatenation failed with exit code: $exitCode"))
+            throw RuntimeException("FFmpeg concatenation failed with exit code: $exitCode")
         }
     }
 
