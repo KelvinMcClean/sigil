@@ -1,5 +1,6 @@
 package com.ceilbhin.sigil.batch
 
+import com.ceilbhin.sigil.media.VideoService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.job.Job
@@ -62,23 +63,20 @@ class VideoBatchConfig {
     @Bean
     @StepScope
     fun ffmpegProcessor(
-        @Value("#{jobParameters['jobId']}") jobId: String,
-        @Value("#{jobParameters['timestamps']}") timestampsStr: String,  // Passed as a comma-separated string
-        @Value("#{jobParameters['stabilize']}") stabilizeStr: String
+        jobContext: VideoJobContext,
+        videoService: VideoService
     ): ItemProcessor<Int, Int> {
         return ItemProcessor { index: Int ->
             val workingDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve("video-app")
-            val inputName = jobId + "_input_" + index + ".mp4"
-            val outputName = jobId + "_processed_" + index + ".mp4"
+            val inputName = jobContext.jobId + "_input_" + index + ".mp4"
+            val outputName = jobContext.jobId + "_processed_" + index + ".mp4"
 
 
             // Parse your params
-            val stabilize = stabilizeStr.toBoolean()
-            val timestampArray: Array<String?> =
-                timestampsStr.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            val timestamp = timestampArray[index]!!.toLong()
+            val stabilize = jobContext.stabilize
+            val timestamp = jobContext.timestamps[index]
 
-            index // Pass to writer
+            videoService.format()
         }
     }
 
