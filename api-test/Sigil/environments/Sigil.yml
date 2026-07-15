@@ -1,0 +1,8 @@
+name: Sigil
+variables:
+  - name: url
+    value: http://localhost:8010
+  - name: api
+    value: "{{url}}/api"
+  - name: jobId
+    value: 37bcf4a5-fae8-4f6c-94b2-05e0d26b32d2
