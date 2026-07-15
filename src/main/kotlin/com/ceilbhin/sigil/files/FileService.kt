@@ -33,4 +33,14 @@ class FileService(var mediaConfiguration: MediaConfiguration) {
         logger.info { "Transfering output to ${mediaConfiguration.baseDir}" }
 
     }
+
+    fun cleanupJob(directory: String) {
+        var workingDir = File(directory)
+        if (workingDir.exists()) {
+            logger.info { "Cleaning up working directory: $workingDir" }
+            workingDir.deleteRecursively()
+        } else {
+            logger.warn { "Working directory does not exist: $workingDir" }
+        }
+    }
 }

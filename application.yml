@@ -3,6 +3,20 @@ server:
   jetty:
     max-http-form-post-size: 2gb
 spring:
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  datasource:
+    url: jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   servlet:
     multipart:
       max-file-size: 2GB

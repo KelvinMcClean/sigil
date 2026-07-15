@@ -1,49 +1,62 @@
 package com.ceilbhin.sigil.rest.controller
 
-import com.ceilbhin.sigil.rest.status.JobStatus
-import com.ceilbhin.sigil.rest.status.StatusEnum
-import com.ceilbhin.sigil.rest.status.StatusTracker
 import com.ceilbhin.sigil.files.FileService
-import com.ceilbhin.sigil.media.VideoService
-import lombok.Getter
+import com.ceilbhin.sigil.rest.status.JobStatusResponse
+import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.batch.core.job.Job
+import org.springframework.batch.core.job.JobExecution
+import org.springframework.batch.core.job.parameters.JobParametersBuilder
+import org.springframework.batch.core.launch.JobOperator
+import org.springframework.batch.core.repository.JobRepository
 import org.springframework.http.ResponseEntity
-import org.springframework.http.ResponseEntity.*
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
-import java.util.*
+import java.util.UUID
 
 
 @RestController
 @RequestMapping("/api/video")
 class VideoController(
-    @Getter private final val videoService: VideoService,
-    private val statusTracker: StatusTracker,
-    private val fileService: FileService) {
+    private val fileService: FileService,
+    private val batchJobOperator: JobOperator,
+    private val videoProcessingJob: Job,
+    private val jobRepository: JobRepository) {
+
+    var logger = KotlinLogging.logger {}
 
     @PostMapping("/process", consumes = ["multipart/form-data"])
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
-        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<Map<String, String>> {
+        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<JobStatusResponse> {
 
-        // Generate a unique Job ID
+        // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()
-        fileService.saveFilesToTemp(jobId, files)
-        videoService.processVideoJobAsync(jobId, files, timestamps, stabilize)
+        val tmpDir = fileService.saveFilesToTemp(jobId, files)
 
-        return accepted().body(mapOf("jobId" to jobId))
+        val timestampsStr: String = timestamps?.joinToString(",") ?: ""
+
+        val params = JobParametersBuilder()
+            .addLong("fileCount", files.size.toLong())
+            .addString("timestamps", timestampsStr)
+            .addString("fileDirectory", tmpDir)
+            .addString("stabilize", java.lang.String.valueOf(stabilize))
+            .addLong("launchTime", System.currentTimeMillis()) // Ensures job uniqueness
+            .toJobParameters()
+        logger.info{"Launching with params: ${params.parameters()}"}
+
+        val job = batchJobOperator.start(videoProcessingJob, params)
+        return ResponseEntity.accepted().body(JobStatusResponse(job))
     }
 
     @GetMapping(value = ["/status/{jobId}"], produces = ["application/json"])
-    fun getJobStatus(@PathVariable jobId: String): ResponseEntity<JobStatus> {
-        val status: JobStatus =
-            statusTracker.getJobStatus(jobId) ?: return status(404).body(
-                JobStatus("UNKNOWN", StatusEnum.UNKNOWN, "Job not found")
-            )
+    fun getJobStatus(@PathVariable jobId: Long): ResponseEntity<JobStatusResponse> {
+        val jobExecution: JobExecution = jobRepository.getJobExecution(jobId)
+            ?: return ResponseEntity.notFound().build()
 
-        // Handle the case where the frontend asks for a job that doesn't exist
+        val response: MutableMap<String, Any> = HashMap<String, Any>()
+        response["status"] = jobExecution.status.toString()
 
-        // Return the JSON object: {"status": "RUNNING"}
-        return ok(status)
+        return ResponseEntity.ok(JobStatusResponse(jobExecution))
     }
 }
