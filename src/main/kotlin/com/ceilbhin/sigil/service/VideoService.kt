@@ -1,9 +1,10 @@
 package com.ceilbhin.sigil.service
 
-import com.ceilbhin.sigil.font.FontResolver
+import com.ceilbhin.sigil.timestamp.font.FontResolver
 import com.ceilbhin.sigil.rest.status.StatusEnum
 import com.ceilbhin.sigil.rest.status.StatusMapper
 import com.ceilbhin.sigil.rest.status.StatusTracker
+import com.ceilbhin.sigil.timestamp.TimestampService
 import com.ceilbhin.sigil.util.FfmpegUtils
 import com.ceilbhin.sigil.util.FileUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -16,7 +17,7 @@ import java.nio.file.Paths
 
 
 @Service
-class VideoService(val statusTracker: StatusTracker) {
+class VideoService(val statusTracker: StatusTracker, val timestampService: TimestampService) {
 
     private final val logger = KotlinLogging.logger {}
 
@@ -26,9 +27,7 @@ class VideoService(val statusTracker: StatusTracker) {
         val statusMapper = StatusMapper(jobId, statusTracker)
         statusMapper.setStatus(StatusEnum.IN_PROGRESS, "Initializing")
         try {
-            val tmpDir = FileUtils.getTmpDir(jobId)
-            val tmpPath = Paths.get(tmpDir)
-            val workingDir = tmpPath.toFile()
+            val workingDir = FileUtils.getWorkingDir(jobId)
             logger.info {"Starting video processing job: $jobId"}
 
             preprocess(jobId, files, timestamps, stabilize, workingDir)
@@ -84,9 +83,8 @@ class VideoService(val statusTracker: StatusTracker) {
                 .append("setsar=1")
 
             if (timestamps != null) {
-                val fontOption: String? = FontResolver().resolveFont(workingDir.toPath())
-
-                val timestamps = processTimestamps(file.originalFilename, timestamps[i], fontOption)
+                logger.info { "Processing timestamps for file: ${file.originalFilename}" }
+                val timestamps = timestampService.getTimestampFilter(jobId, timestamps[i])
                 filterGraph.append(timestamps)
             }
 
@@ -107,11 +105,5 @@ class VideoService(val statusTracker: StatusTracker) {
         logger.info { "Final output: ${finalOutputPath.replace("\\\\", "\\")}" }
     }
 
-    fun processTimestamps(originalFilename: String?, timestamp: Long, fontOption: String?): String {
-        logger.info { "Processing timestamps for file: ${originalFilename}" }
-        return StringBuilder().append(",drawtext=fontfile=$fontOption: text='%{pts\\:localtime\\:")
-            .append(timestamp)
-            .append("\\:%a %Y-%m-%d %H\\\\\\:%M\\\\\\:%S}")
-            .append("': x=w-tw-20: y=h-th-20: fontcolor=white: fontsize=48: box=1: boxcolor=black@0.5").toString()
-    }
+
 }

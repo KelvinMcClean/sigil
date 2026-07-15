@@ -1,4 +1,4 @@
-package com.ceilbhin.sigil.font
+package com.ceilbhin.sigil.timestamp.font
 
 import java.io.IOException
 import java.nio.file.Files
@@ -9,18 +9,21 @@ import java.util.*
 
 class FontResolver {
 
-    val BUNDLED_FONT_RESOURCE: String = "/fonts/RealVhsFontRegular-WyV0z.ttf"
+    val BUNDLED_FONT_RESOURCE: String = "/fonts/RealVhsFont-Normalised.ttf"
     val EXTRACTED_FONT_NAME: String = "app-default-font.ttf"
 
     /**
      * Guarantees a font is available for FFmpeg.
      * Returns either the relative filename of the extracted font, or an escaped system fallback.
      */
-    fun resolveFont(workingDir: Path): String {
+    fun resolveFont(workingDir: Path, userFont: String): String {
         val targetFontPath = workingDir.resolve(EXTRACTED_FONT_NAME)
 
         // 1. Try to extract our bundled font from the JAR resources to our working directory
         if (!Files.exists(targetFontPath)) {
+            if (userFont.isNotEmpty() && Files.exists(Path.of(userFont))) {
+                return Path.of(userFont).relativize(targetFontPath).toString()
+            }
             try {
                 Files.createDirectories(workingDir)
                 FontResolver::class.java.getResourceAsStream(BUNDLED_FONT_RESOURCE).use { `is` ->

@@ -2,6 +2,7 @@ package com.ceilbhin.sigil.util
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.web.multipart.MultipartFile
+import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -33,15 +34,16 @@ class FileUtils {
 
         fun getTmpDir(jobId: String): String {
             val tmpDir = System.getProperty("java.io.tmpdir")
-            val stamperDir = "${tmpDir}sigil"
-            if (!Files.exists(Paths.get(stamperDir))) {
-                Files.createDirectories(Paths.get(stamperDir))
+            val sigilDir = "${tmpDir}sigil/${jobId}"
+            if (!Files.exists(Paths.get(sigilDir))) {
+                Files.createDirectories(Paths.get(sigilDir))
             }
-            val path = "${stamperDir}/${jobId}"
-            if (!Files.exists(Paths.get(path))) {
-                Files.createDirectories(Paths.get(path))
-            }
-            return "$path/"
+            return "$sigilDir/"
+        }
+
+        fun getWorkingDir(jobId: String): File {
+            val tmpDir = getTmpDir(jobId)
+            return File(tmpDir)
         }
 
         @Throws(IOException::class)

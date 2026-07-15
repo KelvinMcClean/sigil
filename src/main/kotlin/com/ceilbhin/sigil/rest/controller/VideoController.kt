@@ -20,8 +20,7 @@ class VideoController(
     private val statusTracker: StatusTracker,
     private val fileService: FileService) {
 
-    @PostMapping
-    @RequestMapping("/process", consumes = ["multipart/form-data"])
+    @PostMapping("/process", consumes = ["multipart/form-data"])
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
