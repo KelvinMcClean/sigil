@@ -37,6 +37,8 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
     implementation 'io.github.oshai:kotlin-logging-jvm:7.0.3'
     implementation 'ws.schild:jave-all-deps:3.5.0'
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+    implementation 'com.h2database:h2'
 }
 
 kotlin {
