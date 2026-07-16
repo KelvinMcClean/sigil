@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor
 import org.springframework.batch.core.BatchStatus
 import org.springframework.batch.core.ExitStatus
 import org.springframework.batch.core.job.JobExecution
+import java.io.Serializable
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -29,6 +30,9 @@ data class JobStatusResponse(
     var createTime: Instant?,
     var updateTime: Instant?
 ) {
+    var completedItems: Int? = null
+    var totalItems: Int? = null
+
     @JsonIgnore
     constructor(jobExecution: JobExecution) : this(
         id = jobExecution.id,
@@ -40,4 +44,14 @@ data class JobStatusResponse(
         createTime = jobExecution.createTime.toInstant(ZoneOffset.UTC),
         updateTime = jobExecution.lastUpdated?.toInstant(ZoneOffset.UTC) ?: jobExecution.createTime.toInstant(ZoneOffset.UTC)
     )
+
+    fun populateFromJob(jobExecution: JobExecution) {
+        totalItems = (jobExecution.jobParameters.parameters.find { it.name == "fileCount" }
+            ?.value?.toString()?.toInt())?.plus(1)
+        completedItems = if (jobExecution.stepExecutions.find { it.stepName == "concatStep" }?.status == BatchStatus.COMPLETED) {
+            totalItems
+        } else {
+            jobExecution.stepExecutions.find { it.stepName == "processFilesStep" }?.writeCount?.toInt()
+        }
+    }
 }

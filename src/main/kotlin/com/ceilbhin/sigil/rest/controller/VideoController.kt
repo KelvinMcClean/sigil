@@ -53,10 +53,8 @@ class VideoController(
     fun getJobStatus(@PathVariable jobId: Long): ResponseEntity<JobStatusResponse> {
         val jobExecution: JobExecution = jobRepository.getJobExecution(jobId)
             ?: return ResponseEntity.notFound().build()
-
-        val response: MutableMap<String, Any> = HashMap<String, Any>()
-        response["status"] = jobExecution.status.toString()
-
-        return ResponseEntity.ok(JobStatusResponse(jobExecution))
+        val response = JobStatusResponse(jobExecution)
+        response.populateFromJob(jobExecution)
+        return ResponseEntity.ok(response)
     }
 }
