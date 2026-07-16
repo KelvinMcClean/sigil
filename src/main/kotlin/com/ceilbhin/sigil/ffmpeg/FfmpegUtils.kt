@@ -34,7 +34,7 @@ class FfmpegUtils {
             ffmpeg.run()
         }
 
-        fun concat(concatFile: Path, finalOutputFilePath: String, statusMapper: StatusMapper, workingDir: File): Int {
+        fun concat(concatFile: Path, finalOutputFilePath: String, workingDir: File): Int {
             val ffmpeg = Ffmpeg(workingDir)
             ffmpeg.add("-y")
             ffmpeg.add("-f")

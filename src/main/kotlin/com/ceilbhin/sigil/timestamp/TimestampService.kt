@@ -1,20 +1,21 @@
 package com.ceilbhin.sigil.timestamp
 
+import com.ceilbhin.sigil.batch.VideoJobContext
 import com.ceilbhin.sigil.timestamp.font.FontConfiguration
 import com.ceilbhin.sigil.timestamp.font.FontResolver
-import com.ceilbhin.sigil.files.FileUtils.Companion.getWorkingDir
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
+import java.io.File
 
 @Service
 class TimestampService(val fontConfiguration: FontConfiguration) {
     private final val logger = KotlinLogging.logger {}
 
-    fun getTimestampFilter(jobId: String, timestamp: Long): String {
-        val workingDir = getWorkingDir(jobId)
+    fun getTimestampFilter(videoJobContext: VideoJobContext, index: Int): String {
+        val workingDir = File(videoJobContext.fileDirectory)
         val userFont= fontConfiguration.path
         val fontOption: String = FontResolver().resolveFont(workingDir.toPath(), userFont)
-        return processTimestamps(timestamp, fontOption)
+        return processTimestamps(videoJobContext.timestamps[index], fontOption)
     }
 
     fun processTimestamps(timestamp: Long, fontOption: String?): String {

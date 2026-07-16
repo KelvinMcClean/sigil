@@ -1,9 +1,15 @@
 package com.ceilbhin.sigil.batch
 
-data class VideoJobContext(
-    val jobId: String,
-    val fileCount: Long,
-    val fileDirectory: String? = null,
-    val timestamps: List<Long>,
+interface VideoJobContext {
+    val fileCount: Long
+    val fileDirectory: String
+    val timestamps: List<Long>
     val stabilize: Boolean
-)
+}
+
+data class VideoJobContextImpl(
+    override val fileCount: Long,
+    override val fileDirectory: String,
+    override val timestamps: List<Long>,
+    override val stabilize: Boolean
+) : VideoJobContext
