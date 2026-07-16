@@ -8,6 +8,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.io.File
 import java.text.SimpleDateFormat
+import kotlin.time.Instant
 
 @Service
 class TimestampService(val fontConfiguration: FontConfiguration, var videoJobContext: VideoJobContext, var mediaConfiguration: MediaConfiguration) {
@@ -41,8 +42,8 @@ class TimestampService(val fontConfiguration: FontConfiguration, var videoJobCon
         val timestamp = getLatestTimestamp()
         val earliestTimestamp = getEarliestTimestamp()
 
-        val latestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(timestamp)
-        val earliestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(earliestTimestamp)
+        val latestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(timestamp).toEpochMilliseconds())
+        val earliestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(earliestTimestamp).toEpochMilliseconds())
         var res = earliestFilenamePattern
         if (latestFilenamePattern != earliestFilenamePattern) {
             res += "-${latestFilenamePattern}"

@@ -33,24 +33,6 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
         return tmpDir
     }
 
-    fun transferFilesToFinalDestination(file: File) {
-
-        val filenamePattern = SimpleDateFormat(mediaConfiguration.filenamePattern).format(file.lastModified())
-
-        val filename = file.nameWithoutExtension
-
-        var fileName = "${filenamePattern} - ${filename}.${file.extension}"
-
-        logger.info { "Transfering output to ${mediaConfiguration.baseDir}" }
-        val finalPath = Paths.get(mediaConfiguration.baseDir, fileName)
-        val success = file.renameTo(finalPath.toFile())
-        if (success) {
-            logger.info { "File transferred to: $finalPath" }
-        } else {
-            logger.error { "Failed to transfer file to: $finalPath" }
-        }
-    }
-
     fun cleanupJob(directory: String) {
         var workingDir = File(directory)
         if (workingDir.exists()) {
@@ -66,11 +48,13 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
         val resolvedTimestamp = timestampService.resolveTextTimestamp()
         val title = videoJobContext.title
 
-        var fileName = "${resolvedTimestamp} - ${title}.mp4"
+        val fileName = mediaConfiguration.filenamePattern.replace("{date}", resolvedTimestamp).replace("{title}", title)
+        val fileNameWithExtension = "$fileName.mp4"
         val earlyTimestampForPath = timestampService.getEarliestTimestamp()
-        val earlyDateForPath = SimpleDateFormat(mediaConfiguration.subDirPattern).format(earlyTimestampForPath)
-        val finalPath = Paths.get(mediaConfiguration.baseDir, earlyDateForPath)
+        val earlyDateForPath = SimpleDateFormat(mediaConfiguration.subDirPattern).format(Instant.fromEpochSeconds(earlyTimestampForPath).toEpochMilliseconds())
+        val finalPath = Paths.get(mediaConfiguration.baseDir, "$earlyDateForPath")
         finalPath.createDirectories()
-        return finalPath.resolve(fileName).toString()
+        logger.info { "Final path: $finalPath" }
+        return finalPath.resolve(fileNameWithExtension).toString()
     }
 }

@@ -17,7 +17,7 @@ class BatchAsyncConfig {
     @Bean
     fun batchTaskExecutor(): TaskExecutor {
         val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 5
+        executor.corePoolSize = 2
         executor.maxPoolSize = 10
         executor.queueCapacity = 25
         executor.setThreadNamePrefix("batch-")

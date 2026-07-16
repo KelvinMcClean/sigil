@@ -24,7 +24,7 @@ spring:
 logging:
   level:
     root: INFO
-    com.ceilbhin.stamper: DEBUG
+    com.ceilbhin.sigil: DEBUG
   file:
     name: logs/application.log
   pattern:
@@ -42,6 +42,6 @@ sigil:
     base-dir: "D:/Media/test/"
     sub-dir-pattern: "yyyy"
     date-pattern: "yyyy.MM.dd"
-    filename: "{date} {title}"
+    filename-pattern: "{date} {title}"
     default-title: "export"
 
