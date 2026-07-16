@@ -2,7 +2,6 @@ package com.ceilbhin.sigil.rest.status
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
 import lombok.AllArgsConstructor
 import lombok.Builder
 import lombok.Data
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor
 import org.springframework.batch.core.BatchStatus
 import org.springframework.batch.core.ExitStatus
 import org.springframework.batch.core.job.JobExecution
-import java.io.Serializable
 import java.time.Instant
 import java.time.ZoneOffset
 

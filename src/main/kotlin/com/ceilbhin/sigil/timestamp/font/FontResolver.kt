@@ -4,7 +4,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.*
+import java.util.Locale
 
 
 class FontResolver {
@@ -48,15 +48,15 @@ class FontResolver {
     private fun getSystemFallbackFontPath(): String {
         val os = System.getProperty("os.name").lowercase(Locale.getDefault())
 
-        if (os.contains("win")) {
+        return if (os.contains("win")) {
             // TRAP: FFmpeg uses colons (:) to split parameters.
             // On Windows, you MUST escape the drive colon (C\:) so FFmpeg doesn't misparse the path.
-            return "C\\:/Windows/Fonts/arial.ttf"
+            "C\\:/Windows/Fonts/arial.ttf"
         } else if (os.contains("mac")) {
-            return "/Library/Fonts/Arial.ttf"
+            "/Library/Fonts/Arial.ttf"
         } else {
             // Standard Debian/Ubuntu path
-            return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
         }
     }
 }

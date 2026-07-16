@@ -11,10 +11,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
-import java.time.ZoneId
 import kotlin.io.path.createDirectories
-import kotlin.time.Instant
-import kotlin.time.toJavaInstant
 
 @Service
 class FileService(var mediaConfiguration: MediaConfiguration, var timestampService: TimestampService, val videoJobContext: VideoJobContext) {
