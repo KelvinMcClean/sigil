@@ -41,7 +41,12 @@ class TimestampService(val fontConfiguration: FontConfiguration, var videoJobCon
     fun resolveTextTimestamp(): String {
         val timestamp = getLatestTimestamp()
         val earliestTimestamp = getEarliestTimestamp()
+        val dateConfiguration = mediaConfiguration.date
+        // if year differs, get both in full
 
+        //if month differs, get both months and days
+
+        //if day differs, get both days
         val latestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(timestamp).toEpochMilliseconds())
         val earliestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(earliestTimestamp).toEpochMilliseconds())
         var res = earliestFilenamePattern
