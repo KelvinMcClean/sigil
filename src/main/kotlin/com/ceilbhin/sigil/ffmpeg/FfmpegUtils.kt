@@ -1,6 +1,5 @@
 package com.ceilbhin.sigil.ffmpeg
 
-import com.ceilbhin.sigil.rest.status.StatusMapper
 import java.io.File
 import java.nio.file.Path
 

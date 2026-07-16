@@ -3,18 +3,10 @@ package com.ceilbhin.sigil.media
 import com.ceilbhin.sigil.batch.VideoJobContext
 import com.ceilbhin.sigil.ffmpeg.FfmpegUtils
 import com.ceilbhin.sigil.files.FileUtils
-import com.ceilbhin.sigil.rest.status.StatusEnum
-import com.ceilbhin.sigil.rest.status.StatusMapper
-import com.ceilbhin.sigil.rest.status.StatusTracker
 import com.ceilbhin.sigil.timestamp.TimestampService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jdk.javadoc.internal.doclets.formats.html.markup.HtmlStyles
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
 import java.io.File
-import java.io.IOException
-import kotlin.io.path.Path
 
 @Service
 class VideoService(val timestampService: TimestampService) {

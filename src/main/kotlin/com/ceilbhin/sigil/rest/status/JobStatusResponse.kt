@@ -1,6 +1,7 @@
 package com.ceilbhin.sigil.rest.status
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import lombok.AllArgsConstructor
 import lombok.Builder
@@ -16,27 +17,27 @@ import java.time.ZoneOffset
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-class JobStatusResponse {
-    private var id: Long? = null
-    private var name: String? = null
-    private var status: BatchStatus? = null
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class JobStatusResponse(
+    var id: Long,
+    var name: String?,
+    var status: BatchStatus?,
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private var exitStatus: ExitStatus? = null
-    private var startTime: Instant? = null
-    private var endTime: Instant? = null
-    private var createTime: Instant? = null
-    private var updateTime: Instant? = null
-
+    var exitStatus: ExitStatus?,
+    var startTime: Instant?,
+    var endTime: Instant?,
+    var createTime: Instant?,
+    var updateTime: Instant?
+) {
     @JsonIgnore
-    constructor(jobExecution: JobExecution) {
-        this.id = jobExecution.id
-        this.name = jobExecution.jobInstance.jobName
-        this.status = jobExecution.status
-        this.exitStatus = jobExecution.exitStatus
-        this.startTime = jobExecution.startTime?.toInstant(ZoneOffset.UTC)
-        this.endTime = jobExecution.endTime?.toInstant(ZoneOffset.UTC)
-        this.createTime = jobExecution.createTime.toInstant(ZoneOffset.UTC)
-        this.updateTime = jobExecution.lastUpdated?.toInstant(ZoneOffset.UTC) ?: this.createTime
-    }
+    constructor(jobExecution: JobExecution) : this(
+        id = jobExecution.id,
+        name = jobExecution.jobInstance.jobName,
+        status = jobExecution.status,
+        exitStatus = jobExecution.exitStatus,
+        startTime = jobExecution.startTime?.toInstant(ZoneOffset.UTC),
+        endTime = jobExecution.endTime?.toInstant(ZoneOffset.UTC),
+        createTime = jobExecution.createTime.toInstant(ZoneOffset.UTC),
+        updateTime = jobExecution.lastUpdated?.toInstant(ZoneOffset.UTC) ?: jobExecution.createTime.toInstant(ZoneOffset.UTC)
+    )
 }

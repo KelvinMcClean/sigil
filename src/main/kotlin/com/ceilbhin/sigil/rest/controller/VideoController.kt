@@ -9,10 +9,9 @@ import org.springframework.batch.core.job.parameters.JobParametersBuilder
 import org.springframework.batch.core.launch.JobOperator
 import org.springframework.batch.core.repository.JobRepository
 import org.springframework.http.ResponseEntity
-import org.springframework.http.ResponseEntity.accepted
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
-import java.util.*
+import java.util.UUID
 
 
 @RestController
@@ -29,16 +28,14 @@ class VideoController(
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
-        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): JobStatusResponse {
+        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<JobStatusResponse> {
 
-        // Generate a unique Job ID
+        // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()
         val tmpDir = fileService.saveFilesToTemp(jobId, files)
 
-        // 2. Convert timestamps array to comma-separated string for Batch Parameters
         val timestampsStr: String = timestamps?.joinToString(",") ?: ""
 
-        // 3. Build Batch Parameters
         val params = JobParametersBuilder()
             .addLong("fileCount", files.size.toLong())
             .addString("timestamps", timestampsStr)
@@ -49,14 +46,11 @@ class VideoController(
         logger.info{"Launching with params: ${params.parameters()}"}
 
         val job = batchJobOperator.start(videoProcessingJob, params)
-        return JobStatusResponse(job)
-
+        return ResponseEntity.accepted().body(JobStatusResponse(job))
     }
 
     @GetMapping(value = ["/status/{jobId}"], produces = ["application/json"])
     fun getJobStatus(@PathVariable jobId: Long): ResponseEntity<JobStatusResponse> {
-        // Note: You might need to query your DB for the actual JobExecutionId
-        // mapping to your UUID jobId, or use the execution ID returned by jobLauncher.run()
         val jobExecution: JobExecution = jobRepository.getJobExecution(jobId)
             ?: return ResponseEntity.notFound().build()
 

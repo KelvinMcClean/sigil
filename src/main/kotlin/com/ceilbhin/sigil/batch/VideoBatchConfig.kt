@@ -34,7 +34,6 @@ class VideoBatchConfig {
                            concatStep: Step,
                            listener: CleanupJobListener): Job {
         return JobBuilder("videoProcessingJob", jobRepository)
-            .incrementer(RunIdIncrementer())
             .start(processFilesStep) // Run FFmpeg on all chunks
             .next(concatStep) // Then concatenate
             .listener(listener)
