@@ -15,4 +15,14 @@ class MediaConfiguration {
     lateinit var datePattern: String
     lateinit var filenamePattern: String
     lateinit var defaultTitle: String
+
+    class Date{
+        lateinit var pattern: Pattern
+    }
+
+    class Pattern {
+       lateinit var year: String
+       lateinit var month: String
+       lateinit var day: String
+    }
 }

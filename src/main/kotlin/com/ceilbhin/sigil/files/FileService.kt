@@ -12,6 +12,7 @@ import java.io.IOException
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import kotlin.io.path.createDirectories
+import kotlin.time.Instant
 
 @Service
 class FileService(var mediaConfiguration: MediaConfiguration, var timestampService: TimestampService, val videoJobContext: VideoJobContext) {
@@ -31,7 +32,7 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
     }
 
     fun cleanupJob(directory: String) {
-        var workingDir = File(directory)
+        val workingDir = File(directory)
         if (workingDir.exists()) {
             logger.info { "Cleaning up working directory: $workingDir" }
             workingDir.deleteRecursively()
