@@ -41,6 +41,7 @@ sigil:
   media:
     base-dir: "D:/Media/test/"
     sub-dir-pattern: "yyyy"
-    filename: "yyyy.MM.dd {title}"
+    date-pattern: "yyyy.MM.dd"
+    filename: "{date} {title}"
     default-title: "export"
 

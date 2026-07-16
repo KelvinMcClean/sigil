@@ -2,6 +2,7 @@ package com.ceilbhin.sigil.media
 
 import com.ceilbhin.sigil.batch.VideoJobContext
 import com.ceilbhin.sigil.ffmpeg.FfmpegUtils
+import com.ceilbhin.sigil.files.FileService
 import com.ceilbhin.sigil.files.FileUtils
 import com.ceilbhin.sigil.timestamp.TimestampService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service
 import java.io.File
 
 @Service
-class VideoService(val timestampService: TimestampService) {
+class VideoService(val timestampService: TimestampService, val fileService: FileService) {
 
     private final val logger = KotlinLogging.logger {}
 
@@ -54,13 +55,13 @@ class VideoService(val timestampService: TimestampService) {
     }
 
     fun concat(videoJobContext: VideoJobContext) {
+        val finalPath = fileService.getFinalPath()
         val workingDir = File(videoJobContext.fileDirectory)
         val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_")} ?: emptyList()
         val concatFile = FileUtils.createConcatPath(workingDir.toPath(), files.size)
-        val finalOutputFilePath = workingDir.toPath().resolve("_final_output.mp4").toString()
-        logger.info { "Final output file path: $finalOutputFilePath" }
+        logger.info { "Final output file path: $finalPath" }
         // The final concatenation command
-        val exitCode = FfmpegUtils.concat(concatFile, finalOutputFilePath, workingDir)
+        val exitCode = FfmpegUtils.concat(concatFile, finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
     }
 }

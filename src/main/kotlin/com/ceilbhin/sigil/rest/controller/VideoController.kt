@@ -28,6 +28,7 @@ class VideoController(
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
+        @RequestParam(value = "title", required = false) title: String?,
         @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<JobStatusResponse> {
 
         // Generate a unique Temp folder location
@@ -39,6 +40,7 @@ class VideoController(
         val params = JobParametersBuilder()
             .addLong("fileCount", files.size.toLong())
             .addString("timestamps", timestampsStr)
+            .addString("title", title.orEmpty())
             .addString("fileDirectory", tmpDir)
             .addString("stabilize", java.lang.String.valueOf(stabilize))
             .addLong("launchTime", System.currentTimeMillis()) // Ensures job uniqueness

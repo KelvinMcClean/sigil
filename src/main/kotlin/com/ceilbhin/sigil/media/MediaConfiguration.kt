@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration
 class MediaConfiguration {
     lateinit var baseDir: String
     lateinit var subDirPattern: String
+    lateinit var datePattern: String
     lateinit var filenamePattern: String
     lateinit var defaultTitle: String
 }
