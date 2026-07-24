@@ -36,12 +36,21 @@ sigil:
     format: "\\:%a %Y-%m-%d %H\\\\\\:%M\\\\\\:%S}"
     path: fonts/RealVhsFont-Normalised.ttf
     location:
-      x: "w-tw-20"
-      y: "h-th-20"
+      x: w-tw-20
+      y: h-th-20
   media:
-    base-dir: "D:/Media/test/"
-    sub-dir-pattern: "yyyy"
-    date-pattern: "yyyy.MM.dd"
+    base-dir: "C:/Media/test/"
+    sub-dir-pattern: yyyy
     filename-pattern: "{date} {title}"
-    default-title: "export"
+    default-title: export
+    date:
+      pattern:
+        year: yyyy
+        month: MM
+        day: dd
+      separator: "."
+      splitter: "-"
+      split-day: true
+      split-month: true
+
 
