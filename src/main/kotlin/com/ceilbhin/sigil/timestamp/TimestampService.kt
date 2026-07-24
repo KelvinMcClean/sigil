@@ -7,8 +7,9 @@ import com.ceilbhin.sigil.timestamp.font.FontResolver
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.io.File
-import java.text.SimpleDateFormat
+import java.util.TimeZone
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 @Service
 class TimestampService(val fontConfiguration: FontConfiguration, var videoJobContext: VideoJobContext, var mediaConfiguration: MediaConfiguration) {
@@ -39,21 +40,44 @@ class TimestampService(val fontConfiguration: FontConfiguration, var videoJobCon
     }
 
     fun resolveTextTimestamp(): String {
-        val timestamp = getLatestTimestamp()
+        val latestTimestamp = getLatestTimestamp()
         val earliestTimestamp = getEarliestTimestamp()
         val dateConfiguration = mediaConfiguration.date
+        val pattern1 = dateConfiguration.getYearFormatted(earliestTimestamp)
+        val pattern2 = getSecondPattern(earliestTimestamp, latestTimestamp, dateConfiguration)
+        logger.info { "Parsed timestamp: $pattern1$pattern2" }
+        return pattern1 + pattern2
+    }
+
+    private fun getSecondPattern(
+        earliestTimestamp: Long,
+        latestTimestamp: Long,
+        dateConfiguration: MediaConfiguration.Date
+    ): String {
         // if year differs, get both in full
+        val earlyDate =
+            Instant.fromEpochSeconds(earliestTimestamp).toJavaInstant().atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
+        val latestDate =
+            Instant.fromEpochSeconds(latestTimestamp).toJavaInstant().atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
+        val isSameYear = earlyDate.year == latestDate.year
+        val isSameMonth = isSameYear && earlyDate.month == latestDate.month
+        val isSameDay = earlyDate == latestDate // LocalDate equality checks year, month, and day automatically
+        var res = ""
+        when {
+            (dateConfiguration.splitDay && (!isSameDay && isSameMonth)) -> {
+                res = "${dateConfiguration.splitter}${dateConfiguration.getDayFormatted(latestTimestamp)}"
+            }
 
-        //if month differs, get both months and days
+            (dateConfiguration.splitMonth && (!isSameMonth && isSameYear)) -> {
+                res = "${dateConfiguration.splitter}${dateConfiguration.getMonthFormatted(latestTimestamp)}"
+            }
 
-        //if day differs, get both days
-        val latestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(timestamp).toEpochMilliseconds())
-        val earliestFilenamePattern = SimpleDateFormat(mediaConfiguration.datePattern).format(Instant.fromEpochSeconds(earliestTimestamp).toEpochMilliseconds())
-        var res = earliestFilenamePattern
-        if (latestFilenamePattern != earliestFilenamePattern) {
-            res += "-${latestFilenamePattern}"
+            !isSameDay -> {
+                res = "${dateConfiguration.splitter}${dateConfiguration.getYearFormatted(latestTimestamp)}"
+            }
+
         }
-        return res
 
+        return res
     }
 }
