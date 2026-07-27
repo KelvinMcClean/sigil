@@ -1,1 +1,15 @@
-services: { }
+services:
+  sigil:
+    image: sigil:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sigil
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./output:/output
+      - ./fonts:/fonts
+      - ./logs:/logs
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
