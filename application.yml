@@ -41,9 +41,9 @@ sigil:
       x: w-tw-20
       y: h-th-20
   media:
-    base-dir: "/output/"
+    base-dir: "./output/"
     sub-dir-pattern: yyyy
-    filename-pattern: "{date} {title}"
+    filename-pattern: "{date}-{title}"
     default-title: export
     date:
       pattern:
@@ -54,4 +54,3 @@ sigil:
       splitter: "-"
       split-day: true
       split-month: true
-

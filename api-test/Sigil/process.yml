@@ -12,11 +12,11 @@ http:
       - name: files
         type: file
         value:
-          - C:\Users\Kelvin McClean\Desktop\Pics\Castle Espie\DSC_8375.MP4
-        contentType: video/mp4
+          - D:\Kelvin McClean\Downloads\IMG_1120.MOV
+        contentType: video/quicktime
       - name: timestamps
         type: text
-        value: 1549729025,1549729058
+        value: 1599729025,1549729058,1549729025,1549729058,1549729025,1549729058
       - name: stabalize
         type: text
         value: "true"
@@ -25,7 +25,7 @@ http:
 runtime:
   scripts:
     - type: after-response
-      code: bru.setEnvVar("jobId", res.body.jobId)
+      code: bru.setEnvVar("videoJobId", res.body.id)
 
 settings:
   encodeUrl: true

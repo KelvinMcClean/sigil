@@ -29,6 +29,7 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         if (stabilize) {
             FfmpegUtils.stabalize(workingDir, inputFilePath, trfFilePath)
             // Prepend the stabilization transform to the filtergraph
+            // The format=yuv420p is now handled at the start of the chain in FfmpegUtils
             filterGraph.append("vidstabtransform=input=").append(trfFilePath)
                 .append(":zoom=0:smoothing=10,")
             logger.info { "Stabilization transform added to filtergraph for file: ${file.name}" }
@@ -48,9 +49,21 @@ class VideoService(val timestampService: TimestampService, val fileService: File
 
         logger.debug { "Running FFmpeg command for file ${file.name}: ffmpeg -y -i $inputFilePath -vf $filterGraph -c:v libx264 -r 30 -c:a aac -ar 48000 $outputFilePath" }
         // Run the render pass with the dynamically built filtergraph
-
         logger.info { "Processing render for file: ${file.name}" }
-        FfmpegUtils.preprocess(filterGraph, inputFilePath, outputFilePath, workingDir)
+        var exitCode = FfmpegUtils.preprocess(filterGraph, inputFilePath, outputFilePath, workingDir)
+
+        if (exitCode != 0) {
+            logger.warn { "Initial processing failed for ${file.name}, attempting repair..." }
+            val repairedPath = "repaired_$inputFilePath"
+            val repairExitCode = FfmpegUtils.repair(inputFilePath, repairedPath, workingDir)
+
+            if (repairExitCode == 0) {
+                logger.info { "Repair successful, retrying processing..." }
+                FfmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
+            } else {
+                logger.error { "Repair failed for file ${file.name}" }
+            }
+        }
         logger.info { "Completed render for file: ${file.name}" }
     }
 
