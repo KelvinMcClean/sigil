@@ -14,9 +14,12 @@ class FfmpegUtils {
             ffmpeg.add("-vf")
             ffmpeg.add("format=yuv420p," + filterGraph.toString())
             ffmpeg.add("-c:v", "libx264")
-            // Removed fixed -r 30, it is safer to handle in filtergraph if needed
+            ffmpeg.add("-pix_fmt", "yuv420p") // Add this explicitly to handle HEVC/MOV compatibility
             ffmpeg.add("-c:a", "aac")
             ffmpeg.add("-ar", "48000")
+            // Explicitly force mapping to ensure we don't carry over unsupported streams
+            ffmpeg.add("-map", "0:v:0")
+            ffmpeg.add("-map", "0:a:0")
             ffmpeg.add(outputFilePath)
             return ffmpeg.run()
         }

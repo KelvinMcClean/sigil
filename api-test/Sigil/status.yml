@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{api}}/video/status/{{jobId}}"
+  url: "{{api}}/video/status/{{videoJobId}}"
   body:
     type: multipart-form
     data:

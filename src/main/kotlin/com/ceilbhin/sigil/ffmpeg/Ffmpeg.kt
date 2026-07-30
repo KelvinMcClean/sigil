@@ -2,6 +2,8 @@ package com.ceilbhin.sigil.ffmpeg
 
 import ws.schild.jave.process.ProcessLocator
 import ws.schild.jave.process.ffmpeg.DefaultFFMPEGLocator
+import io.github.oshai.kotlinlogging.KotlinLogging
+
 import java.io.File
 
 class Ffmpeg(private val workingDir: File) {
@@ -37,8 +39,23 @@ class Ffmpeg(private val workingDir: File) {
     fun run(): Int {
         val exeLocation = getFfmpegPath()
         val commandWithExe = listOf(exeLocation) + command.filterNotNull()
-        val renderBuilder = ProcessBuilder(commandWithExe).inheritIO().directory(workingDir)
+
+        // Log the full command for debugging
+        val logger = KotlinLogging.logger {}
+        logger.info { "Executing FFmpeg command: ${commandWithExe.joinToString(" ")}" }
+
+        val renderBuilder = ProcessBuilder(commandWithExe).redirectErrorStream(true).directory(workingDir)
         val process = renderBuilder.start()
-        return process.waitFor()
-    }
+
+        // Capture and log error output
+        val output = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            logger.error { "FFmpeg process failed with exit code $exitCode. Output: $output" }
+        } else {
+            logger.debug { "FFmpeg process output: $output" }
+        }
+
+        return exitCode    }
 }
