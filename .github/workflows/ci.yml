@@ -11,14 +11,21 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - name: Set up Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '25'
+          cache: 'gradle'
       - name: Build
         run: ./gradlew build
+      - id: publish_test_report
+        name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          report_paths: '**/build/test-results/test/TEST-*.xml'
       - name: Upload
         if: ${{ github.event_name == 'push' }}
         uses: actions/upload-artifact@v4

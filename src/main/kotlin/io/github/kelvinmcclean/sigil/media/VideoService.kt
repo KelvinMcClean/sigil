@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 import java.io.File
 
 @Service
-class VideoService(val timestampService: TimestampService, val fileService: FileService) {
+class VideoService(val timestampService: TimestampService, val fileService: FileService, val ffmpegUtils: FfmpegUtils) {
 
     private final val logger = KotlinLogging.logger {}
 
@@ -27,7 +27,7 @@ class VideoService(val timestampService: TimestampService, val fileService: File
 
         // If stabilization is requested, run the detection pass and add the transform filter
         if (stabilize) {
-            FfmpegUtils.stabalize(workingDir, inputFilePath, trfFilePath)
+            ffmpegUtils.stabalize(workingDir, inputFilePath, trfFilePath)
             // Prepend the stabilization transform to the filtergraph
             // The format=yuv420p is now handled at the start of the chain in FfmpegUtils
             filterGraph.append("vidstabtransform=input=").append(trfFilePath)
@@ -50,16 +50,16 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         logger.debug { "Running FFmpeg command for file ${file.name}: ffmpeg -y -i $inputFilePath -vf $filterGraph -c:v libx264 -r 30 -c:a aac -ar 48000 $outputFilePath" }
         // Run the render pass with the dynamically built filtergraph
         logger.info { "Processing render for file: ${file.name}" }
-        var exitCode = FfmpegUtils.preprocess(filterGraph, inputFilePath, outputFilePath, workingDir)
+        var exitCode = ffmpegUtils.preprocess(filterGraph, inputFilePath, outputFilePath, workingDir)
 
         if (exitCode != 0) {
             logger.warn { "Initial processing failed for ${file.name}, attempting repair..." }
             val repairedPath = "repaired_$inputFilePath"
-            val repairExitCode = FfmpegUtils.repair(inputFilePath, repairedPath, workingDir)
+            val repairExitCode = ffmpegUtils.repair(inputFilePath, repairedPath, workingDir)
 
             if (repairExitCode == 0) {
                 logger.info { "Repair successful, retrying processing..." }
-                FfmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
+                ffmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
             } else {
                 logger.error { "Repair failed for file ${file.name}" }
             }
@@ -74,7 +74,7 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         val concatFile = FileUtils.createConcatPath(workingDir.toPath(), files.size)
         logger.info { "Final output file path: $finalPath" }
         // The final concatenation command
-        val exitCode = FfmpegUtils.concat(concatFile, finalPath, workingDir)
+        val exitCode = ffmpegUtils.concat(concatFile, finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
     }
 }
