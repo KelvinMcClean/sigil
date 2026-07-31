@@ -1,0 +1,62 @@
+package io.github.kelvinmcclean.sigil.rest.controller
+
+import io.github.kelvinmcclean.sigil.files.FileService
+import io.github.kelvinmcclean.sigil.rest.status.JobStatusResponse
+import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.batch.core.job.Job
+import org.springframework.batch.core.job.JobExecution
+import org.springframework.batch.core.job.parameters.JobParametersBuilder
+import org.springframework.batch.core.launch.JobOperator
+import org.springframework.batch.core.repository.JobRepository
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
+import java.util.UUID
+
+
+@RestController
+@RequestMapping("/api/video")
+class VideoController(
+    private val fileService: FileService,
+    private val batchJobOperator: JobOperator,
+    private val videoProcessingJob: Job,
+    private val jobRepository: JobRepository) {
+
+    var logger = KotlinLogging.logger {}
+
+    @PostMapping("/process", consumes = ["multipart/form-data"])
+    fun process(
+        @RequestParam("files") files: Array<MultipartFile>,
+        @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
+        @RequestParam(value = "title", required = false) title: String?,
+        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<JobStatusResponse> {
+
+        // Generate a unique Temp folder location
+        val jobId = UUID.randomUUID().toString()
+        val tmpDir = fileService.saveFilesToTemp(jobId, files)
+
+        val timestampsStr: String = timestamps?.joinToString(",") ?: ""
+
+        val params = JobParametersBuilder()
+            .addLong("fileCount", files.size.toLong())
+            .addString("timestamps", timestampsStr)
+            .addString("title", title.orEmpty())
+            .addString("fileDirectory", tmpDir)
+            .addString("stabilize", java.lang.String.valueOf(stabilize))
+            .addLong("launchTime", System.currentTimeMillis()) // Ensures job uniqueness
+            .toJobParameters()
+        logger.info{"Launching with params: ${params.parameters()}"}
+
+        val job = batchJobOperator.start(videoProcessingJob, params)
+        return ResponseEntity.accepted().body(JobStatusResponse(job))
+    }
+
+    @GetMapping(value = ["/status/{jobId}"], produces = ["application/json"])
+    fun getJobStatus(@PathVariable jobId: Long): ResponseEntity<JobStatusResponse> {
+        val jobExecution: JobExecution = jobRepository.getJobExecution(jobId)
+            ?: return ResponseEntity.notFound().build()
+        val response = JobStatusResponse(jobExecution)
+        response.populateFromJob(jobExecution)
+        return ResponseEntity.ok(response)
+    }
+}

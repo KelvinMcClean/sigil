@@ -26,7 +26,7 @@ spring:
 logging:
   level:
     root: INFO
-    com.ceilbhin.sigil: DEBUG
+    io.github.kelvinmcclean.sigil: DEBUG
   file:
     name: logs/application.log
   pattern:
