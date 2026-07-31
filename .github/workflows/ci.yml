@@ -1,5 +1,10 @@
-name: ci_pull.yml
-on: [pull_request, workflow_dispatch]
+name: ci.yml
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,3 +19,9 @@ jobs:
           java-version: '17'
       - name: Build
         run: ./gradlew build
+      - name: Upload
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/libs/*.jar
+          name: sigil
