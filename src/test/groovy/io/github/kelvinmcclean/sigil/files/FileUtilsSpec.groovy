@@ -4,6 +4,7 @@ import org.springframework.web.multipart.MultipartFile
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.TempDir
+import spock.util.environment.RestoreSystemProperties
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -36,12 +37,27 @@ class FileUtilsSpec extends Specification {
 
         then:
         !tmpDir.isEmpty()
-        tmpDir.contains("sigil/${jobId}")
-        tmpDir.endsWith('/')
+        tmpDir.endsWith(File.separator)
+        Path.of(tmpDir).endsWith(Path.of('sigil', jobId))
+        Path.of(tmpDir).startsWith(Path.of(System.getProperty('java.io.tmpdir')))
         Files.isDirectory(Path.of(tmpDir))
 
         cleanup:
         Path.of(tmpDir).toFile().deleteDir()
+    }
+
+    @RestoreSystemProperties
+    def "getTmpDir resolves against a temp dir that has no trailing separator"() {
+        given: 'a system temp dir without a trailing separator, as on Linux and macOS'
+        System.setProperty('java.io.tmpdir', tmpPath.toString())
+        def jobId = UUID.randomUUID().toString()
+
+        when:
+        def tmpDir = FileUtils.getTmpDir(jobId)
+
+        then: 'the job directory is created inside the temp dir, not alongside it'
+        Path.of(tmpDir) == tmpPath.resolve('sigil').resolve(jobId)
+        Files.isDirectory(tmpPath.resolve('sigil').resolve(jobId))
     }
 
     def "getTmpDir is idempotent for the same job id"() {

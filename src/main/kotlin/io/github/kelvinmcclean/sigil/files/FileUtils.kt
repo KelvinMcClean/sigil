@@ -1,6 +1,7 @@
 package io.github.kelvinmcclean.sigil.files
 
 import org.springframework.web.multipart.MultipartFile
+import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,12 +31,12 @@ class FileUtils {
 
         @JvmStatic
         fun getTmpDir(jobId: String): String {
-            val tmpDir = System.getProperty("java.io.tmpdir")
-            val sigilDir = "${tmpDir}sigil/${jobId}"
-            if (!Files.exists(Paths.get(sigilDir))) {
-                Files.createDirectories(Paths.get(sigilDir))
+            // Resolve rather than concatenate: java.io.tmpdir only ends with a separator on some platforms
+            val sigilDir = Paths.get(System.getProperty("java.io.tmpdir"), "sigil", jobId)
+            if (!Files.exists(sigilDir)) {
+                Files.createDirectories(sigilDir)
             }
-            return "$sigilDir/"
+            return "$sigilDir${File.separator}"
         }
 
 

@@ -62,7 +62,7 @@ class FileServiceSpec extends Specification {
         }
 
         and:
-        tmpDir.contains("sigil/${jobId}")
+        Path.of(tmpDir).endsWith(Path.of('sigil', jobId))
         Files.isDirectory(Path.of(tmpDir))
 
         cleanup:
