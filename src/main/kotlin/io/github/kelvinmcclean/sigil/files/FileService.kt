@@ -25,7 +25,7 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
         logger.info { "Temporary directory for job $id: $tmpDir" }
 
         val tmpPath = Paths.get(tmpDir)
-        FileUtils.transfer(files, tmpPath, id)
+        FileUtils.transfer(files, tmpPath)
         logger.info { "Files saved: $tmpPath" }
 
         return tmpDir

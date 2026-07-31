@@ -1,8 +1,6 @@
 package io.github.kelvinmcclean.sigil.files
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.web.multipart.MultipartFile
-import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -10,15 +8,15 @@ import java.nio.file.Paths
 
 class FileUtils {
     companion object {
-        private final val logger = KotlinLogging.logger {}
 
+        @JvmStatic
         fun createConcatPath(tmpPath: Path,  fileCount: Int): Path {
-            val lines: MutableList<String?> = ArrayList<String?>()
+            val lines: MutableList<String?> = ArrayList()
 
             for (i in 0..<fileCount) {
                 val processedPath = "_processed_$i.mp4"
 
-                // Escape single quotes in filenames if they exist, and wrap the path
+                // Escape single quotes in filenames if they exist and wrap the path
                 val formattedLine = "file '" + processedPath.replace("'", "'\\''") + "'"
                 lines.add(formattedLine)
             }
@@ -30,6 +28,7 @@ class FileUtils {
             return listFilePath
         }
 
+        @JvmStatic
         fun getTmpDir(jobId: String): String {
             val tmpDir = System.getProperty("java.io.tmpdir")
             val sigilDir = "${tmpDir}sigil/${jobId}"
@@ -40,8 +39,9 @@ class FileUtils {
         }
 
 
+        @JvmStatic
         @Throws(IOException::class)
-        fun transfer(files: Array<MultipartFile>, tmpPath: Path, jobId: String) {
+        fun transfer(files: Array<MultipartFile>, tmpPath: Path) {
             for ((i, element) in files.withIndex()) {
                 val file = element
                 // Construct the target path: e.g., /temp/12345-uuid_input_0.mp4
