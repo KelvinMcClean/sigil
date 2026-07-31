@@ -1,7 +1,7 @@
 ---
 name: Spike
 about: Raise an issue for investigation
-title: "[SPIKE] - desc"
+title: "[SPIKE] - "
 labels: Spike
 assignees: KelvinMcClean
 
