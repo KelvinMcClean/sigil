@@ -42,17 +42,28 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
     }
 
     fun getFinalPath(): String {
-
         val resolvedTimestamp = timestampService.resolveTextTimestamp()
         val title = videoJobContext.title
 
-        val fileName = mediaConfiguration.filenamePattern.replace("{date}", resolvedTimestamp).replace("{title}", title)
+        val fileName = mediaConfiguration.filenamePattern
+            .replace("{date}", resolvedTimestamp)
+            .replace("{title}", title)
+            .trim() // Ensure no leading/trailing spaces
         val fileNameWithExtension = "$fileName.mp4"
+
         val earlyTimestampForPath = timestampService.getEarliestTimestamp()
-        val earlyDateForPath = SimpleDateFormat(mediaConfiguration.subDirPattern).format(Instant.fromEpochSeconds(earlyTimestampForPath).toEpochMilliseconds())
-        val finalPath = Paths.get(mediaConfiguration.baseDir, "$earlyDateForPath")
-        finalPath.createDirectories()
+        val earlyDateForPath = SimpleDateFormat(mediaConfiguration.subDirPattern)
+            .format(Instant.fromEpochSeconds(earlyTimestampForPath).toEpochMilliseconds())
+
+        val baseDir = Paths.get(mediaConfiguration.baseDir)
+        val outputDir = baseDir.resolve(earlyDateForPath)
+        outputDir.createDirectories()
+
+        val finalPath = outputDir.resolve(fileNameWithExtension)
         logger.info { "Final path: $finalPath" }
-        return finalPath.resolve(fileNameWithExtension).toString()
+
+        // Return as an absolute path to ensure FFmpeg can find it,
+        // especially if working dir is different from output dir
+        return finalPath.toAbsolutePath().toString()
     }
 }
