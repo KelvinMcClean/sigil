@@ -42,3 +42,4 @@ logs/application.log
 .gitconfig
 application-local.yml
 output/*
+logs/*

@@ -19,9 +19,10 @@ class FfmpegUtils {
         ffmpeg.add("-pix_fmt", "yuv420p") // Add this explicitly to handle HEVC/MOV compatibility
         ffmpeg.add("-c:a", "aac")
         ffmpeg.add("-ar", "48000")
-        // Explicitly force mapping to ensure we don't carry over unsupported streams
+        // Explicitly force mapping to ensure we don't carry over unsupported streams.
+        // Audio is optional ('?') so that silent clips don't abort the whole render.
         ffmpeg.add("-map", "0:v:0")
-        ffmpeg.add("-map", "0:a:0")
+        ffmpeg.add("-map", "0:a:0?")
         ffmpeg.add(outputFilePath)
         return ffmpeg.run()
     }

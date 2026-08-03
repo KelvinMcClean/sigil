@@ -1,9 +1,17 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
 plugins {
     id 'groovy'
     id 'org.jetbrains.kotlin.jvm' version '2.3.21'
     id 'org.jetbrains.kotlin.plugin.spring' version '2.3.21'
     id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'java-test-fixtures'
+    id 'idea'
 }
 
 group = 'io.github.kelvinmcclean'
@@ -18,7 +26,40 @@ java {
 
 repositories {
     mavenCentral()
+    google()
 }
+
+idea {
+    module {
+        testSources.from(file("$projectDir/src/integrationTest/groovy"))
+    }
+}
+
+// Container-backed integration tests live in their own source set so that they never
+// run as part of `gradle test` / `gradle build`.
+sourceSets {
+
+    // Shared unit-test logging config (logback-test.xml) applied across all modules.
+    test {
+        resources.srcDirs += "$rootDir/shared-resources/test-logging"
+    }
+    integrationTest {
+        java.srcDir "$projectDir/src/integrationTest/java"
+        resources.srcDirs += "$projectDir/src/integrationTest/resources"
+
+        if (!main.resources.srcDirs.contains(file("$rootDir/shared-resources"))) {
+            resources.srcDirs += "$rootDir/shared-resources"
+        }
+        compileClasspath += test.output + main.output
+        runtimeClasspath += test.output + main.output
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 
 dependencies {
     compileOnly 'org.projectlombok:lombok'
@@ -52,7 +93,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
 }
 
 kotlin {
@@ -72,4 +115,25 @@ clean.doLast {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('integrationTest', Test) {
+    dependsOn 'bootJar'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    def includesTag = System.properties.includesTag
+
+    useJUnitPlatform {
+        if (includesTag != null)
+            includeTags includesTag
+    }
+
+    if (System.getenv("CI") == null) {
+        // Only set the system property if not running in CI, as Github Actions runs an older version.
+        // Using this version to support Rancher.
+        systemProperty 'api.version', System.getProperty('api.version', '1.41')
+    }
+
+    outputs.cacheIf { false }
+    group = 'verification'
 }
