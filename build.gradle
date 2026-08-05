@@ -87,11 +87,11 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-nio'
     testImplementation 'org.spockframework:spock-core:2.4-groovy-5.0'
     testImplementation 'org.spockframework:spock-spring:2.4-groovy-5.0'
-    // Required by Spock to mock/stub classes (as opposed to interfaces)
     testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis:3.4'
     testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.codehaus.groovy:groovy-json:3.0.9'
 
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

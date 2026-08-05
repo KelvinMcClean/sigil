@@ -1,14 +1,14 @@
 package io.github.kelvinmcclean.sigil
 
-
-import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Component
 import org.springframework.web.client.NoOpResponseErrorHandler
 import org.springframework.web.client.RestTemplate
-import spock.lang.Specification
 
 @Component
 class RestSpec {
@@ -21,43 +21,19 @@ class RestSpec {
         return template
     }
 
-    public <T> ResponseEntity<T> get(String uri, Class<T> responseType) {
-        return restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(httpHeaders), responseType);
+    def <T> ResponseEntity<T> get(String uri, Class<T> responseType) {
+        return restTemplate.exchange(uri, HttpMethod.GET, HttpEntity.EMPTY, responseType);
     }
 
-    public <T> ResponseEntity<T> get(String uri, ParameterizedTypeReference<T> responseType) {
-        return restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(httpHeaders), responseType);
+    def <T> ResponseEntity<T> get(String uri, Class<T> responseType, Object... urlVariables) {
+        return restTemplate.exchange(uri, HttpMethod.GET, HttpEntity.EMPTY, responseType, urlVariables);
     }
 
-    public <T> ResponseEntity<T> get(String uri, Class<T> responseType, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> post(String uri, Class<T> responseType, Object headerBody, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(headerBody, httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> post(String uri, ParameterizedTypeReference<T> responseType, Object headerBody, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(headerBody, httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> post(String uri, Class<T> responseType, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> post(String uri, ParameterizedTypeReference<T> responseType, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.POST, new HttpEntity<>(httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> putWithHeader(String uri, Class<T> responseType, Object headerBody, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(headerBody, httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> put(String uri, Class<T> responseType, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(httpHeaders), responseType, urlVariables);
-    }
-
-    public <T> ResponseEntity<T> delete(String uri, Class<T> responseType, Object... urlVariables) {
-        return restTemplate.exchange(uri, HttpMethod.DELETE, new HttpEntity<>(httpHeaders), responseType, urlVariables);
+    def <T> ResponseEntity<T> post(String uri, Class<T> responseType, Object body = null, ContentDisposition contentDisposition = null) {
+        def headers = new HttpHeaders()
+        headers.contentType = MediaType.MULTIPART_FORM_DATA
+        headers.contentDisposition = contentDisposition
+        def httpEntity = new HttpEntity<>(body, headers)
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, responseType)
     }
 }
