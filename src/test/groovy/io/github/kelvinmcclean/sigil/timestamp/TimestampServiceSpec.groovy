@@ -1,6 +1,7 @@
 package io.github.kelvinmcclean.sigil.timestamp
 
 import io.github.kelvinmcclean.sigil.batch.VideoJobContext
+import io.github.kelvinmcclean.sigil.ffmpeg.FfmpegUtils
 import io.github.kelvinmcclean.sigil.media.MediaConfiguration
 import io.github.kelvinmcclean.sigil.timestamp.font.FontConfiguration
 import io.github.kelvinmcclean.sigil.timestamp.font.ScreenLocation
@@ -23,6 +24,8 @@ class TimestampServiceSpec extends Specification {
 
     FontConfiguration fontConfiguration
     MediaConfiguration mediaConfiguration
+    FfmpegUtils ffmpegUtils
+
     VideoJobContext videoJobContext = Mock()
 
     @Subject
@@ -52,7 +55,8 @@ class TimestampServiceSpec extends Specification {
                 filenamePattern: '{date}-{title}',
                 defaultTitle: 'export',
                 date: newDateConfig(true, true))
-        timestampService = new TimestampService(fontConfiguration, videoJobContext, mediaConfiguration, fileService, ffmpegUtils)
+        ffmpegUtils = new FfmpegUtils()
+        timestampService = new TimestampService(fontConfiguration, videoJobContext, mediaConfiguration, ffmpegUtils)
     }
 
     private static MediaConfiguration.Date newDateConfig(boolean splitDay, boolean splitMonth) {

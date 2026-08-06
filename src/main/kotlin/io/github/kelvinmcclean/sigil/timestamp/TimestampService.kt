@@ -18,7 +18,7 @@ class TimestampService(
     val fontConfiguration: FontConfiguration,
     var videoJobContext: VideoJobContext,
     var mediaConfiguration: MediaConfiguration,
-    private val ffmpegUtils: FfmpegUtils
+    var ffmpegUtils: FfmpegUtils
 ) {
     private final val logger = KotlinLogging.logger {}
 
