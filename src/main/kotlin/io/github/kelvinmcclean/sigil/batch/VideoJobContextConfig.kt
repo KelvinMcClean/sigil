@@ -16,11 +16,10 @@ class VideoJobContextConfig {
         mediaConfiguration: MediaConfiguration
     ): VideoJobContext {
 
-        // Parse the raw strings into usable, strictly-typed Kotlin objects once
         return VideoJobContextImpl(
             fileCount = (jobParameters["fileCount"] as Long),
             fileDirectory = jobParameters["fileDirectory"] as String,
-            timestamps = (jobParameters["timestamps"] as String).split(",").map { it.toLong() },
+            timestamps = ((jobParameters["timestamps"] as? String) ?: "").split(",").filter { it.isNotEmpty() }.map { it.toLong() },
             title = jobParameters["title"].toString().ifEmpty { mediaConfiguration.defaultTitle },
             stabilize = (jobParameters["stabilize"] as String).toBoolean()
         )

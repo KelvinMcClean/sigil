@@ -2,6 +2,7 @@ package io.github.kelvinmcclean.sigil.batch
 
 import io.github.kelvinmcclean.sigil.batch.files.CleanupJobListener
 import io.github.kelvinmcclean.sigil.media.VideoService
+import io.github.kelvinmcclean.sigil.timestamp.TimestampService
 import org.springframework.batch.core.configuration.annotation.StepScope
 import org.springframework.batch.core.job.Job
 import org.springframework.batch.core.job.builder.JobBuilder
@@ -23,20 +24,20 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 class VideoBatchConfig {
-    // --- 1. THE JOB DEFINITION ---
     @Bean
     fun videoProcessingJob(jobRepository: JobRepository,
+                           buildTimestampStep: Step,
                            processFilesStep: Step,
                            concatStep: Step,
                            listener: CleanupJobListener): Job {
         return JobBuilder("videoProcessingJob", jobRepository)
-            .start(processFilesStep) // Run FFmpeg on all chunks
+            .start(buildTimestampStep) // Run FFmpeg on all chunks
+            .next(processFilesStep) // Run FFmpeg on all chunks
             .next(concatStep) // Then concatenate
             .listener(listener)
             .build()
     }
 
-    // --- 2. STEP 1: CHUNK-ORIENTED PROCESSING ---
     @Bean
     fun processFilesStep(
         jobRepository: JobRepository,
@@ -51,8 +52,21 @@ class VideoBatchConfig {
             .writer(noOpWriter)
             .build()
     }
+    @Bean
+    fun buildTimestampStep(
+        jobRepository: JobRepository,
+        indexReader: ListItemReader<Int>,
+        timestampProcessor: ItemProcessor<Int, Int>,
+        noOpWriter: ItemWriter<Int>
+    ): Step {
+        return StepBuilder("buildTimestampStep", jobRepository)
+            .chunk<Int, Int>(1)
+            .reader(indexReader)
+            .processor(timestampProcessor)
+            .writer(noOpWriter)
+            .build()
+    }
 
-    // Reader: Generates a list of indices [0, 1, 2...] based on file count
     @Bean
     @StepScope
     fun indexReader(jobConfig: VideoJobContext): ListItemReader<Int> {
@@ -61,7 +75,18 @@ class VideoBatchConfig {
         return ListItemReader(indices)
     }
 
-    // Processor: Where your Jave2 FFmpeg logic lives
+    @Bean
+    @StepScope
+    fun timestampProcessor(
+        videoJobContext: VideoJobContext,
+        timestampService: TimestampService
+    ): FunctionItemProcessor<Int, Int> {
+        return FunctionItemProcessor { index: Int ->
+            timestampService.buildTimestamps(videoJobContext, index)
+            // Return the index to pass to the writer (not used)
+            index
+        }
+    }
     @Bean
     @StepScope
     fun ffmpegProcessor(
@@ -75,13 +100,11 @@ class VideoBatchConfig {
         }
     }
 
-    // Writer: Spring Batch requires a writer for chunks, even if we just save to disk natively
     @Bean
     fun noOpWriter(): ItemWriter<Int> {
         return ItemWriter { _: Chunk<out Int>? -> }
     }
 
-    // --- 3. STEP 2: CONCATENATION TASKLET ---
     @Bean
     fun concatStep(
         jobRepository: JobRepository,

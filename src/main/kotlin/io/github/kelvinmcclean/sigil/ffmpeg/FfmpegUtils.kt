@@ -3,6 +3,7 @@ package io.github.kelvinmcclean.sigil.ffmpeg
 import org.springframework.stereotype.Component
 import java.io.File
 import java.nio.file.Path
+import kotlin.time.Instant
 
 @Component
 class FfmpegUtils {
@@ -25,6 +26,17 @@ class FfmpegUtils {
         ffmpeg.add("-map", "0:a:0?")
         ffmpeg.add(outputFilePath)
         return ffmpeg.run()
+    }
+
+    fun getTimestamp(inputFilePath: String, workingDir: File): Long {
+        val ffmpeg = Ffmpeg(workingDir)
+        ffmpeg.add("-v", "quiet")
+        ffmpeg.add(inputFilePath)
+        ffmpeg.add("-show_entries", "stream=index,codec_type:stream_tags=creation_time:format_tags=creation_time")
+        val output = ffmpeg.runProbe()
+        val instant = output.split("\r\n").first { it.startsWith("TAG") }.split("creation_time=")[1]
+
+        return Instant.parse(instant).epochSeconds
     }
 
     fun stabalize(workingDir: File, inputFilePath: String, trfFilePath: String) {

@@ -25,6 +25,21 @@ class Ffmpeg(private val workingDir: File) {
         return DefaultFFMPEGLocator().executablePath
     }
 
+    private fun getFfProbePath(): String {
+        // 1. Try system-installed ffprobe first (required for Docker)
+        try {
+            // Check if ffprobe is in the PATH
+            val os = System.getProperty("os.name").lowercase()
+            val command = if (os.contains("win")) listOf("cmd", "/c", "ffprobe -version") else listOf("ffprobe", "-version")
+            val process = ProcessBuilder(command).start()
+            if (process.waitFor() == 0) return "ffprobe"
+        } catch (e: Exception) {
+            // Fall through to JAVE locator
+        }
+        // 2. Fallback to JAVE's bundled binary
+        return DefaultFFMPEGLocator().executablePath.replace("ffmpeg", "ffprobe")
+    }
+
     fun add(arg: String) {
         command.add(arg)
     }
@@ -36,8 +51,18 @@ class Ffmpeg(private val workingDir: File) {
         command.addAll(args)
     }
 
+
     fun run(): Int {
         val exeLocation = getFfmpegPath()
+        return run(exeLocation)
+    }
+
+    fun runProbe(): String {
+        val exeLocation = getFfProbePath()
+        return runGetOutput(exeLocation)
+    }
+
+    fun run(exeLocation: String): Int {
         val commandWithExe = listOf(exeLocation) + command.filterNotNull()
 
         // Log the full command for debugging
@@ -57,5 +82,29 @@ class Ffmpeg(private val workingDir: File) {
             logger.debug { "FFmpeg process output: $output" }
         }
 
-        return exitCode    }
+        return exitCode
+    }
+
+    fun runGetOutput(exeLocation: String): String {
+        val commandWithExe = listOf(exeLocation) + command.filterNotNull()
+
+        // Log the full command for debugging
+        val logger = KotlinLogging.logger {}
+        logger.info { "Executing FFmpeg command: ${commandWithExe.joinToString(" ")}" }
+
+        val renderBuilder = ProcessBuilder(commandWithExe).redirectErrorStream(true).directory(workingDir)
+        val process = renderBuilder.start()
+
+        // Capture and log error output
+        val output = process.inputStream.bufferedReader().readText()
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            logger.error { "FFmpeg process failed with exit code $exitCode. Output: $output" }
+        } else {
+            logger.debug { "FFmpeg process output: $output" }
+        }
+
+        return output
+    }
 }

@@ -46,7 +46,6 @@ class VideoProcessingIntegrationSpec extends Specification {
             def body = new LinkedMultiValueMap<String, Object>();
             def resource = new ClassPathResource("/stock.mp4")
             body.add("files", resource)
-            body.put("timestamps", ["1599729025"])
         when:
             def res = restSpec.post(url, String.class, body)
             def jsonBody = jsonSlurper.parseText(res.body) as Map<String, Object>
@@ -61,7 +60,7 @@ class VideoProcessingIntegrationSpec extends Specification {
             pollStatus.totalItems == 2
         when: "Wait for job to complete"
             pollStatus = getCompletedJob(jsonBody.id, jsonSlurper)
-            def completedFile = new File("./tmp/output/2020/2020.09.10-export.mp4")
+            def completedFile = new File("./tmp/output/2017/2017.01.17-export.mp4")
         then:
             pollStatus.status == "COMPLETED"
             completedFile.exists()
