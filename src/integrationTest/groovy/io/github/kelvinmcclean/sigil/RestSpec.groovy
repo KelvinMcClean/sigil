@@ -29,10 +29,12 @@ class RestSpec {
         return restTemplate.exchange(uri, HttpMethod.GET, HttpEntity.EMPTY, responseType, urlVariables);
     }
 
-    def <T> ResponseEntity<T> post(String uri, Class<T> responseType, Object body = null, ContentDisposition contentDisposition = null) {
+    def <T> ResponseEntity<T> post(String uri, Class<T> responseType) {
+        return restTemplate.exchange(uri, HttpMethod.POST, HttpEntity.EMPTY, responseType)
+    }
+    def <T> ResponseEntity<T> post(String uri, Class<T> responseType, Object body) {
         def headers = new HttpHeaders()
         headers.contentType = MediaType.MULTIPART_FORM_DATA
-        headers.contentDisposition = contentDisposition
         def httpEntity = new HttpEntity<>(body, headers)
         return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, responseType)
     }

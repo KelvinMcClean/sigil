@@ -12,7 +12,11 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'java-test-fixtures'
     id 'idea'
+    id 'jvm-test-suite'
+
 }
+
+apply plugin: 'java'
 
 group = 'io.github.kelvinmcclean'
 version = '0.0.1-SNAPSHOT'
@@ -29,29 +33,28 @@ repositories {
     google()
 }
 
-idea {
-    module {
-        testSources.from(file("$projectDir/src/integrationTest/groovy"))
-    }
-}
+testing {
+    suites {
+        integrationTest(JvmTestSuite) {
+            useSpock('2.4-groovy-5.0')
 
-// Container-backed integration tests live in their own source set so that they never
-// run as part of `gradle test` / `gradle build`.
-sourceSets {
+            sources {
+                groovy.srcDirs = ["$projectDir/src/integrationTest/groovy"]
+                resources.srcDirs = ["$projectDir/src/integrationTest/resources"]
+            }
 
-    // Shared unit-test logging config (logback-test.xml) applied across all modules.
-    test {
-        resources.srcDirs += "$rootDir/shared-resources/test-logging"
-    }
-    integrationTest {
-        java.srcDir "$projectDir/src/integrationTest/java"
-        resources.srcDirs += "$projectDir/src/integrationTest/resources"
+            dependencies {
+                implementation project()
+            }
 
-        if (!main.resources.srcDirs.contains(file("$rootDir/shared-resources"))) {
-            resources.srcDirs += "$rootDir/shared-resources"
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter test
+                    }
+                }
+            }
         }
-        compileClasspath += test.output + main.output
-        runtimeClasspath += test.output + main.output
     }
 }
 
@@ -115,25 +118,4 @@ clean.doLast {
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-tasks.register('integrationTest', Test) {
-    dependsOn 'bootJar'
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    def includesTag = System.properties.includesTag
-
-    useJUnitPlatform {
-        if (includesTag != null)
-            includeTags includesTag
-    }
-
-    if (System.getenv("CI") == null) {
-        // Only set the system property if not running in CI, as Github Actions runs an older version.
-        // Using this version to support Rancher.
-        systemProperty 'api.version', System.getProperty('api.version', '1.41')
-    }
-
-    outputs.cacheIf { false }
-    group = 'verification'
 }

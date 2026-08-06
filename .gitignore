@@ -43,3 +43,4 @@ logs/application.log
 application-local.yml
 output/*
 logs/*
+tmp/*

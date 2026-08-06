@@ -1,17 +1,20 @@
 package io.github.kelvinmcclean.sigil
 
 import groovy.json.JsonSlurper
+import jakarta.annotation.PreDestroy
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.boot.testcontainers.context.ImportTestcontainers
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpStatus
+import org.springframework.test.context.TestPropertySource
 import org.springframework.util.LinkedMultiValueMap
 import spock.lang.Shared
 import spock.lang.Specification
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = ["sigil.media.base-dir=./tmp/output"])
 @ImportTestcontainers
 class VideoProcessingIntegrationSpec extends Specification {
 
@@ -44,12 +47,8 @@ class VideoProcessingIntegrationSpec extends Specification {
             def resource = new ClassPathResource("/stock.mp4")
             body.add("files", resource)
             body.put("timestamps", ["1599729025"])
-            ContentDisposition contentDisposition = ContentDisposition.builder("form-data")
-                .name("file")
-                .filename(resource.getFilename())
-                .build()
         when:
-            def res = restSpec.post(url, String.class, body, contentDisposition)
+            def res = restSpec.post(url, String.class, body)
             def jsonBody = jsonSlurper.parseText(res.body) as Map<String, Object>
         then:
             res.statusCode == HttpStatus.ACCEPTED
@@ -60,10 +59,9 @@ class VideoProcessingIntegrationSpec extends Specification {
             ["STARTED", "COMPLETED"].contains(pollStatus.status)
             pollStatus.completedItems != null
             pollStatus.totalItems == 2
-            1==2
         when: "Wait for job to complete"
             pollStatus = getCompletedJob(jsonBody.id, jsonSlurper)
-            def completedFile = new File("./test-output/2020/2020.09.10-export.mp4")
+            def completedFile = new File("./tmp/output/2020/2020.09.10-export.mp4")
         then:
             pollStatus.status == "COMPLETED"
             completedFile.exists()
@@ -81,6 +79,14 @@ class VideoProcessingIntegrationSpec extends Specification {
             res = pollJob(id, jsonSlurper)
         } while (res.status != "COMPLETED")
         return res
+    }
+
+    @PreDestroy
+    def cleanup() {
+        def completedFile = new File("./tmp/")
+        if (completedFile.exists()) {
+            completedFile.deleteDir()
+        }
     }
 
 }
