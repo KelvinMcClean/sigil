@@ -9,5 +9,5 @@ import org.springframework.boot.runApplication
 class SigilApplication
 
 fun main(args: Array<String>) {
-    runApplication<io.github.kelvinmcclean.sigil.SigilApplication>(*args)
+    runApplication<SigilApplication>(*args)
 }

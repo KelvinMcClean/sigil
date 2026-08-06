@@ -13,7 +13,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 @Configuration
 class BatchAsyncConfig {
 
-    // 1. Thread Pool - Use a real ThreadPool, not SimpleAsyncTaskExecutor
     @Bean
     fun batchTaskExecutor(): TaskExecutor {
         val executor = ThreadPoolTaskExecutor()
@@ -25,11 +24,9 @@ class BatchAsyncConfig {
         return executor
     }
 
-    // 2. Registry
     @Bean
     fun jobRegistry(): JobRegistry = MapJobRegistry()
 
-    // 3. The Operator (The only bean you need to manually configure)
     @Bean
     fun batchJobOperator(
         jobRepository: JobRepository,

@@ -1,6 +1,8 @@
 package io.github.kelvinmcclean.sigil.timestamp
 
 import io.github.kelvinmcclean.sigil.batch.VideoJobContext
+import io.github.kelvinmcclean.sigil.ffmpeg.FfmpegUtils
+import io.github.kelvinmcclean.sigil.files.FileService
 import io.github.kelvinmcclean.sigil.media.MediaConfiguration
 import io.github.kelvinmcclean.sigil.timestamp.font.FontConfiguration
 import io.github.kelvinmcclean.sigil.timestamp.font.FontResolver
@@ -12,7 +14,12 @@ import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
 @Service
-class TimestampService(val fontConfiguration: FontConfiguration, var videoJobContext: VideoJobContext, var mediaConfiguration: MediaConfiguration) {
+class TimestampService(
+    val fontConfiguration: FontConfiguration,
+    var videoJobContext: VideoJobContext,
+    var mediaConfiguration: MediaConfiguration,
+    private val ffmpegUtils: FfmpegUtils
+) {
     private final val logger = KotlinLogging.logger {}
 
     fun getTimestampFilter(videoJobContext: VideoJobContext, index: Int): String {
@@ -20,6 +27,13 @@ class TimestampService(val fontConfiguration: FontConfiguration, var videoJobCon
         val userFont= fontConfiguration.path
         val fontOption: String = FontResolver().resolveFont(workingDir.toPath(), userFont)
         return processTimestamps(videoJobContext.timestamps[index], fontOption)
+    }
+
+    fun getTimestampFilter(videoJobContext: VideoJobContext, timestamp: Long): String {
+        val workingDir = File(videoJobContext.fileDirectory)
+        val userFont= fontConfiguration.path
+        val fontOption: String = FontResolver().resolveFont(workingDir.toPath(), userFont)
+        return processTimestamps(timestamp, fontOption)
     }
 
     fun processTimestamps(timestamp: Long, fontOption: String?): String {
@@ -79,5 +93,14 @@ class TimestampService(val fontConfiguration: FontConfiguration, var videoJobCon
         }
 
         return res
+    }
+
+    fun buildTimestamps(videoJobContext: VideoJobContext, index: Int) {
+        if (videoJobContext.timestamps.size <= index) {
+            val inputFilePath = "_input_$index.mp4"
+            val workingDir = File(videoJobContext.fileDirectory)
+            val timestamp = ffmpegUtils.getTimestamp(inputFilePath, workingDir)
+            videoJobContext.timestamps += timestamp
+        }
     }
 }

@@ -46,10 +46,15 @@ data class JobStatusResponse(
     fun populateFromJob(jobExecution: JobExecution) {
         totalItems = (jobExecution.jobParameters.parameters.find { it.name == "fileCount" }
             ?.value?.toString()?.toInt())?.plus(1)
-        completedItems = if (jobExecution.stepExecutions.find { it.stepName == "concatStep" }?.status == BatchStatus.COMPLETED) {
-            totalItems
+        completedItems = completedItems(jobExecution)
+    }
+
+    private fun completedItems(jobExecution: JobExecution): Int? {
+        if (jobExecution.stepExecutions.find { it.stepName == "concatStep" }?.status == BatchStatus.COMPLETED) {
+            return totalItems
         } else {
-            jobExecution.stepExecutions.find { it.stepName == "processFilesStep" }?.writeCount?.toInt()
+            val step = jobExecution.stepExecutions.find { it.stepName == "processFilesStep" };
+            return step?.writeCount?.toInt() ?: 0
         }
     }
 }

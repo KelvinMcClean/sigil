@@ -52,7 +52,7 @@ class TimestampServiceSpec extends Specification {
                 filenamePattern: '{date}-{title}',
                 defaultTitle: 'export',
                 date: newDateConfig(true, true))
-        timestampService = new TimestampService(fontConfiguration, videoJobContext, mediaConfiguration)
+        timestampService = new TimestampService(fontConfiguration, videoJobContext, mediaConfiguration, fileService, ffmpegUtils)
     }
 
     private static MediaConfiguration.Date newDateConfig(boolean splitDay, boolean splitMonth) {
