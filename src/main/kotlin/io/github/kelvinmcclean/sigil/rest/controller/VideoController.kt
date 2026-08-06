@@ -29,7 +29,7 @@ class VideoController(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
         @RequestParam(value = "title", required = false) title: String?,
-        @RequestParam(value = "stabilize", defaultValue = "false") stabilize: Boolean): ResponseEntity<JobStatusResponse> {
+        @RequestParam(value = "stabilize", defaultValue = "false", required = false) stabilize: Boolean): ResponseEntity<JobStatusResponse> {
 
         // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()

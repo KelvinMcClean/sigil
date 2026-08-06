@@ -1,10 +1,22 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
 plugins {
     id 'groovy'
     id 'org.jetbrains.kotlin.jvm' version '2.3.21'
     id 'org.jetbrains.kotlin.plugin.spring' version '2.3.21'
     id 'org.springframework.boot' version '4.1.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'java-test-fixtures'
+    id 'idea'
+    id 'jvm-test-suite'
+
 }
+
+apply plugin: 'java'
 
 group = 'io.github.kelvinmcclean'
 version = '0.0.1-SNAPSHOT'
@@ -18,7 +30,39 @@ java {
 
 repositories {
     mavenCentral()
+    google()
 }
+
+testing {
+    suites {
+        integrationTest(JvmTestSuite) {
+            useSpock('2.4-groovy-5.0')
+
+            sources {
+                groovy.srcDirs = ["$projectDir/src/integrationTest/groovy"]
+                resources.srcDirs = ["$projectDir/src/integrationTest/resources"]
+            }
+
+            dependencies {
+                implementation project()
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        shouldRunAfter test
+                    }
+                }
+            }
+        }
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
 
 dependencies {
     compileOnly 'org.projectlombok:lombok'
@@ -46,13 +90,15 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-nio'
     testImplementation 'org.spockframework:spock-core:2.4-groovy-5.0'
     testImplementation 'org.spockframework:spock-spring:2.4-groovy-5.0'
-    // Required by Spock to mock/stub classes (as opposed to interfaces)
     testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis:3.4'
     testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.codehaus.groovy:groovy-json:3.0.9'
 
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
 }
 
 kotlin {
