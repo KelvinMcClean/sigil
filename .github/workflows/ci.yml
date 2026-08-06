@@ -10,6 +10,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      id-token: write
     steps:
       - uses: actions/checkout@v7
       - name: Set up Java
@@ -36,6 +40,10 @@ jobs:
   integration-test:
     name: Integration test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      id-token: write
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -45,7 +53,6 @@ jobs:
           distribution: 'temurin'
           java-version: '25'
           cache: 'gradle'
-      # Builds the production image from the Dockerfile and drives it with Testcontainers.
       - name: Integration test
         run: ./gradlew integrationTest
       - id: publish_integration_test_report
