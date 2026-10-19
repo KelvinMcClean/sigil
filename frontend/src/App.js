@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -10,6 +10,7 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [jobId, setJobId] = useState(null);
+  const [jobs, setJobs] = useState([]);
 
   const handleDragEnter = useCallback((e) => {
     e.preventDefault();
@@ -97,6 +98,8 @@ function App() {
 
       if (response.data && response.data.jobId) {
         setJobId(response.data.jobId);
+        const fileNames = files.map(f => f.name);
+        addJobToTracker(response.data.jobId, fileNames);
         setUploadStatus({ 
           type: 'success', 
           message: `Upload successful! Job ID: ${response.data.jobId}` 
@@ -129,6 +132,48 @@ function App() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const fetchJobStatus = useCallback(async (jobId) => {
+    try {
+      const response = await axios.get(`/api/video/status/${jobId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching job status:', error);
+      return null;
+    }
+  }, []);
+
+  const addJobToTracker = useCallback((jobId, fileNames) => {
+    setJobs(prev => [
+      ...prev,
+      {
+        id: jobId,
+        fileNames,
+        status: 'PROCESSING',
+        progress: 0,
+        createdAt: new Date().toISOString()
+      }
+    ]);
+  }, []);
+
+  const removeJobFromTracker = useCallback((jobId) => {
+    setJobs(prev => prev.filter(job => job.id !== jobId));
+  }, []);
+
+  const updateJobStatus = useCallback((jobId, updates) => {
+    setJobs(prev => prev.map(job =>
+      job.id === jobId ? { ...job, ...updates } : job
+    ));
+  }, []);
+
+  const getJobStatusColor = (status) => {
+    switch (status) {
+      case 'COMPLETED': return '#10b981';
+      case 'FAILED': return '#ef4444';
+      case 'PROCESSING': return '#3b82f6';
+      default: return '#6b7280';
+    }
   };
 
   return (
@@ -285,6 +330,36 @@ function App() {
       <footer className="app-footer">
         <p>Sigil Video Processing Portal</p>
       </footer>
+
+      {jobs.length > 0 && (
+        <div className="job-tracker">
+          {jobs.map((job) => (
+            <div key={job.id} className="job-pill" style={{ borderColor: getJobStatusColor(job.status) }}>
+              <div className="job-pill-header">
+                <span className="job-status-dot" style={{ backgroundColor: getJobStatusColor(job.status) }}></span>
+                <span className="job-id">Job: {job.id.substring(0, 8)}...</span>
+                <button 
+                  className="job-close-btn"
+                  onClick={() => removeJobFromTracker(job.id)}
+                  title="Dismiss"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="job-files">
+                {job.fileNames.length > 0 && (
+                  <span className="job-file-count">{job.fileNames.length} file{job.fileNames.length > 1 ? 's' : ''}</span>
+                )}
+              </div>
+              <div className="job-status">{job.status}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
