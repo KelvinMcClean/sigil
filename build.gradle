@@ -2,6 +2,7 @@ buildscript {
     repositories {
         mavenCentral()
         google()
+        gradlePluginPortal()
     }
     dependencies {
         classpath 'com.github.node-gradle:gradle-node-plugin:6.0.0'
