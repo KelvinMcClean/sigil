@@ -129,17 +129,19 @@ tasks.named('test') {
 node {
     version = '20.11.1'
     npmVersion = '10.2.4'
+    workDir = file("${projectDir}/frontend")
 }
 
-// Configure npmInstall task to work in frontend directory
-tasks.named('npmInstall') {
+// Custom npm install task for frontend
+task npmInstallFrontend(type: NpmTask) {
     workingDir = file("${projectDir}/frontend")
+    args = ['install']
 }
 
-// Frontend build - uses npmInstall task from the plugin
+// Frontend build - uses custom npmInstallFrontend
 task buildFrontendProduction(type: NpmTask) {
     workingDir = file("${projectDir}/frontend")
-    dependsOn npmInstall
+    dependsOn npmInstallFrontend
     args = ['run', 'build']
 }
 
