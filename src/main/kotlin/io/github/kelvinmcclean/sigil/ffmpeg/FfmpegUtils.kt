@@ -122,15 +122,13 @@ class FfmpegUtils {
         return 0L
     }
 
-    fun concat(inputFilePath: String, finalOutputFilePath: String, workingDir: File): Int {
+    fun concat(concatFile: Path, finalOutputFilePath: String, workingDir: File): Int {
         val ffmpeg = Ffmpeg(workingDir)
         ffmpeg.add("-y")
-        ffmpeg.add("-f", "concat")
-        ffmpeg.add("-safe", "0")
-        ffmpeg.add("-use_wallclock_as_timestamps", "1")
-        ffmpeg.add("-i", inputFilePath)
-        ffmpeg.add("-c", "copy")
-        ffmpeg.add(finalOutputFilePath)
+        ffmpeg.add("-f", "concat", "-safe", "0", "-i", concatFile.toString(),
+            "-c", "copy",
+            finalOutputFilePath
+        )
         return ffmpeg.run()
     }
 

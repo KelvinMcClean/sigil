@@ -8,6 +8,7 @@ import io.github.kelvinmcclean.sigil.timestamp.TimestampService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.io.File
+import java.nio.file.Path
 
 @Service
 class VideoService(val timestampService: TimestampService, val fileService: FileService, val ffmpegUtils: FfmpegUtils) {
@@ -18,7 +19,7 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         val stabilize = videoJobContext.stabilize
         val workingDir = File(videoJobContext.fileDirectory)
         val file = workingDir.listFiles()?.find { it.isFile && it.name == "_input_${index}.mp4" } ?: return
-        logger.info {"Processing file: ${file.name}"}
+        logger.info { "Processing file: ${file.name}" }
         val inputFilePath = "_input_$index.mp4"
         val outputFilePath = "_processed_$index.mp4"
         val trfFilePath = "_transforms_$index.trf"
@@ -73,20 +74,12 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_") }?.sortedBy { it.name } ?: emptyList()
         logger.info { "Final output file path: $finalPath" }
         
-        if (files.isEmpty()) {
-            logger.error { "No processed files found to concatenate" }
-            return
-        }
+        // Create the file list for concat demuxer
+        val fileListPath = workingDir.resolve("_fileList.txt")
+        fileListPath.writeText(files.joinToString("\n") { "file '${it.name}'" })
         
-        if (files.size == 1) {
-            // Single file, just rename it
-            logger.info { "Only one file, renaming ${files[0].name} to $finalPath" }
-            files[0].renameTo(File(finalPath))
-            return
-        }
-        
-        // Use concat filter with multiple inputs for robust concatenation
-        val exitCode = ffmpegUtils.concatWithFilter(files.map { it.name }.toTypedArray(), finalPath, workingDir)
+        // Use concat demuxer
+        val exitCode = ffmpegUtils.concat(fileListPath.toPath(), finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
     }
 }
