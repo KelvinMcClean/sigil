@@ -96,13 +96,14 @@ function App() {
         }
       });
 
-      if (response.data && response.data.jobId) {
-        setJobId(response.data.jobId);
+      if (response.data && response.data.id) {
+        const backendJobId = response.data.id;
+        setJobId(backendJobId);
         const fileNames = files.map(f => f.name);
-        addJobToTracker(response.data.jobId, fileNames);
+        addJobToTracker(backendJobId, fileNames);
         setUploadStatus({ 
           type: 'success', 
-          message: `Upload successful! Job ID: ${response.data.jobId}` 
+          message: `Upload successful! Job ID: ${backendJobId}` 
         });
         setFiles([]);
         setTitle('');
@@ -140,6 +141,9 @@ function App() {
       return response.data;
     } catch (error) {
       console.error('Error fetching job status:', error);
+      if (error.response?.status === 404) {
+        return { status: 'UNKNOWN', batchStatus: 'UNKNOWN' };
+      }
       return null;
     }
   }, []);
