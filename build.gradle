@@ -149,7 +149,7 @@ task buildFrontendProduction(type: NpmTask) {
 // Copy built frontend to resources
 task copyFrontendToResources(type: Copy) {
     from "${projectDir}/frontend/build"
-    into "${projectDir}/src/main/resources"
+    into "${projectDir}/src/main/resources/static"
     dependsOn buildFrontendProduction
 }
 
