@@ -370,7 +370,7 @@ function App() {
             <div key={job.id} className="job-pill" style={{ borderColor: getJobStatusColor(job.status) }}>
               <div className="job-pill-header">
                 <span className="job-status-dot" style={{ backgroundColor: getJobStatusColor(job.status) }}></span>
-                <span className="job-id">Job: {job.id.substring(0, 8)}...</span>
+                <span className="job-id">Job: {String(job.id).substring(0, 8)}...</span>
                 <button 
                   className="job-close-btn"
                   onClick={() => removeJobFromTracker(job.id)}
