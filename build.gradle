@@ -123,12 +123,12 @@ tasks.named('test') {
 // Frontend build task
  task buildFrontend(type: Exec) {
     workingDir "${projectDir}/frontend"
-    commandLine 'npm', 'install'
+    commandLine 'cmd', '/c', 'npm', 'install'
 }
 
  task buildFrontendProduction(type: Exec) {
     workingDir "${projectDir}/frontend"
-    commandLine 'npm', 'run', 'build'
+    commandLine 'cmd', '/c', 'npm', 'run', 'build'
     dependsOn buildFrontend
 }
 
