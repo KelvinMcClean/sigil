@@ -3,6 +3,9 @@ buildscript {
         mavenCentral()
         google()
     }
+    dependencies {
+        classpath 'com.github.node-gradle:gradle-node-plugin:6.0.0'
+    }
 }
 plugins {
     id 'groovy'
@@ -13,6 +16,7 @@ plugins {
     id 'java-test-fixtures'
     id 'idea'
     id 'jvm-test-suite'
+    id 'com.github.node-gradle.node'
 
 }
 
@@ -120,29 +124,31 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Frontend build task
- task buildFrontend(type: Exec) {
-    workingDir "${projectDir}/frontend"
-    commandLine 'cmd', '/c', 'npm', 'install'
+// Node plugin configuration
+node {
+    version = '20.11.1'
+    npmVersion = '10.2.4'
+    workDir = file("${projectDir}/frontend")
 }
 
- task buildFrontendProduction(type: Exec) {
-    workingDir "${projectDir}/frontend"
-    commandLine 'cmd', '/c', 'npm', 'run', 'build'
+// Build frontend with npm using the Node plugin
+task buildFrontend(type: NpmTask) {
+    dependsOn npmInstall
+    args = ['run', 'build']
+}
+
+// Copy built frontend to resources
+task copyFrontendToResources(type: Copy) {
+    from "${projectDir}/frontend/build"
+    into "${projectDir}/src/main/resources"
     dependsOn buildFrontend
 }
 
- task copyFrontendToResources(type: Copy) {
-    from "${projectDir}/frontend/build"
-    into "${projectDir}/src/main/resources"
-    dependsOn buildFrontendProduction
-}
-
 // Make the frontend build part of the main build process
- processResources.dependsOn copyFrontendToResources
+processResources.dependsOn copyFrontendToResources
 
 // Clean frontend build artifacts
- clean.doLast {
+clean.doLast {
     try {
         fileTree("${projectDir}/frontend/build").forEach { it.delete() }
     } catch (Exception e) {
