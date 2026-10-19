@@ -142,8 +142,8 @@ task buildFrontendProduction(type: NpmTask) {
     workingDir = file("${projectDir}/frontend")
     dependsOn npmInstallFrontend
     args = ['run', 'build']
-    // Skip ESLint errors for CI builds
-    environment 'CI', 'false'
+    // Pass CI=false to skip ESLint treating warnings as errors
+    setEnvironment(['CI': 'false'])
 }
 
 // Copy built frontend to resources
