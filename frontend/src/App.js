@@ -176,6 +176,35 @@ function App() {
     }
   };
 
+  // Poll job status every 2 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      jobs.forEach(async (job) => {
+        if (job.status === 'PROCESSING') {
+          const statusData = await fetchJobStatus(job.id);
+          if (statusData) {
+            const batchStatus = statusData.batchStatus || statusData.status;
+            const newStatus = mapBatchStatus(batchStatus);
+            if (newStatus !== job.status) {
+              updateJobStatus(job.id, { status: newStatus });
+            }
+          }
+        }
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [jobs, fetchJobStatus, updateJobStatus]);
+
+  const mapBatchStatus = (batchStatus) => {
+    if (!batchStatus) return 'PROCESSING';
+    const statusUpper = batchStatus.toUpperCase();
+    if (statusUpper.includes('COMPLETED') || statusUpper.includes('FINISHED')) return 'COMPLETED';
+    if (statusUpper.includes('FAILED') || statusUpper.includes('ERROR')) return 'FAILED';
+    if (statusUpper.includes('STARTED') || statusUpper.includes('RUNNING')) return 'PROCESSING';
+    return 'PROCESSING';
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
