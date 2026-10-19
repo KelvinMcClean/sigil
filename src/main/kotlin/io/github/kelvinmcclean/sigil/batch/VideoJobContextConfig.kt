@@ -21,7 +21,8 @@ class VideoJobContextConfig {
             fileDirectory = jobParameters["fileDirectory"] as String,
             timestamps = ((jobParameters["timestamps"] as? String) ?: "").split(",").filter { it.isNotEmpty() }.map { it.toLong() },
             title = jobParameters["title"].toString().ifEmpty { mediaConfiguration.defaultTitle },
-            stabilize = (jobParameters["stabilize"] as String).toBoolean()
+            stabilize = (jobParameters["stabilize"] as String).toBoolean(),
+            originalFilenames = (jobParameters["originalFilenames"] as? String)?.split(",") ?: emptyList()
         )
     }
 }

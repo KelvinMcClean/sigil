@@ -3,6 +3,8 @@ package io.github.kelvinmcclean.sigil.ffmpeg
 import org.springframework.stereotype.Component
 import java.io.File
 import java.nio.file.Path
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.time.Instant
 
 @Component
@@ -28,15 +30,143 @@ class FfmpegUtils {
         return ffmpeg.run()
     }
 
-    fun getTimestamp(inputFilePath: String, workingDir: File): Long {
+    /**
+     * Extracts a date from common video filename patterns.
+     * Handles formats like: VID_20261004_WA0035, PXL-20261004-test, IMG_20261004_123456,
+     * 2026-10-04_video, 2026/10/04_video, etc.
+     * Returns the timestamp at midnight UTC for the extracted date, or null if no date found.
+     */
+    private fun extractDateFromFilename(filename: String): Long? {
+        if (filename.isEmpty()) return null
+        
+        // Try to find YYYYMMDD pattern (8 consecutive digits)
+        val yyyyMmDdPattern = Regex("\\b(\\d{4})(\\d{2})(\\d{2})\\b")
+        yyyyMmDdPattern.find(filename)?.let { match ->
+            try {
+                val year = match.groupValues[1].toInt()
+                val month = match.groupValues[2].toInt()
+                val day = match.groupValues[3].toInt()
+                val date = LocalDate.of(year, month, day)
+                return date.atStartOfDay(ZoneId.of("UTC")).toInstant().epochSecond
+            } catch (e: Exception) {
+                // Invalid date, try next pattern
+            }
+        }
+        
+        // Try to find YYYY-MM-DD or YYYY/MM/DD pattern
+        val yyyyMmDdSeparatedPattern = Regex("\\b(\\d{4})[-/](\\d{2})[-/](\\d{2})\\b")
+        yyyyMmDdSeparatedPattern.find(filename)?.let { match ->
+            try {
+                val year = match.groupValues[1].toInt()
+                val month = match.groupValues[2].toInt()
+                val day = match.groupValues[3].toInt()
+                val date = LocalDate.of(year, month, day)
+                return date.atStartOfDay(ZoneId.of("UTC")).toInstant().epochSecond
+            } catch (e: Exception) {
+                // Invalid date
+            }
+        }
+        
+        return null
+    }
+
+    fun getTimestamp(inputFilePath: String, workingDir: File, originalFilename: String? = null): Long {
         val ffmpeg = Ffmpeg(workingDir)
         ffmpeg.add("-v", "quiet")
+        ffmpeg.add("-show_format")
+        ffmpeg.add("-show_streams")
+        ffmpeg.add("-of", "flat")
         ffmpeg.add(inputFilePath)
-        ffmpeg.add("-show_entries", "stream=index,codec_type:stream_tags=creation_time:format_tags=creation_time")
         val output = ffmpeg.runProbe()
-        val instant = output.split("\r\n").first { it.startsWith("TAG") }.split("creation_time=")[1]
+        
+        // Try to find creation_time in format tags or stream tags
+        val creationTimeLine = output.split("\r\n", "\n").firstOrNull { 
+            it.contains("creation_time") && it.contains("=")
+        }
+        
+        if (creationTimeLine != null) {
+            // Extract the value after the equals sign
+            val value = creationTimeLine.split("=", limit = 2).getOrNull(1)?.trim('"')
+            if (value != null) {
+                return try {
+                    Instant.parse(value).epochSeconds
+                } catch (e: Exception) {
+                    // If parsing fails, try other fallbacks
+                    null
+                } ?: run {
+                    // If creation_time exists but can't be parsed, try filename
+                    originalFilename?.let { extractDateFromFilename(it) }
+                } ?: run {
+                    // Fall back to file modification time
+                    val file = File(workingDir, inputFilePath)
+                    if (file.exists()) file.lastModified() / 1000 else null
+                } ?: 0L
+            }
+        }
+        
+        // Try to extract date from original filename
+        originalFilename?.let { 
+            val filenameDate = extractDateFromFilename(it)
+            if (filenameDate != null) {
+                return filenameDate
+            }
+        }
+        
+        // Fallback: use file modification time
+        val file = File(workingDir, inputFilePath)
+        if (file.exists()) {
+            return file.lastModified() / 1000
+        }
+        
+        // Ultimate fallback: epoch (0)
+        return 0L
+    }
 
-        return Instant.parse(instant).epochSeconds
+    fun concat(inputFilePath: String, finalOutputFilePath: String, workingDir: File): Int {
+        val ffmpeg = Ffmpeg(workingDir)
+        ffmpeg.add("-y")
+        ffmpeg.add("-f", "concat")
+        ffmpeg.add("-safe", "0")
+        ffmpeg.add("-use_wallclock_as_timestamps", "1")
+        ffmpeg.add("-i", inputFilePath)
+        ffmpeg.add("-c", "copy")
+        ffmpeg.add(finalOutputFilePath)
+        return ffmpeg.run()
+    }
+
+    /**
+     * Concatenate multiple files using the concat filter.
+     * This is more robust than the concat demuxer when re-encoding is needed.
+     */
+    fun concatWithFilter(inputFiles: Array<String>, finalOutputFilePath: String, workingDir: File): Int {
+        val ffmpeg = Ffmpeg(workingDir)
+        ffmpeg.add("-y")
+        
+        // Add all input files
+        for (file in inputFiles) {
+            ffmpeg.add("-i", file)
+        }
+        
+        // Build concat filter: [0:v][0:a][1:v][1:a]...concat=n=X:v=1:a=1[v][a]
+        val filterGraph = StringBuilder("[0:v][0:a]")
+        for (i in 1 until inputFiles.size) {
+            filterGraph.append("[$i:v][${i}:a]")
+        }
+        filterGraph.append("concat=n=${inputFiles.size}:v=1:a=1[v][a]")
+        
+        ffmpeg.add("-filter_complex", filterGraph.toString())
+        ffmpeg.add("-map", "[v]")
+        ffmpeg.add("-map", "[a]")
+        ffmpeg.add("-c:v", "libx264")
+        ffmpeg.add("-crf", "23")
+        ffmpeg.add("-preset", "fast")
+        ffmpeg.add("-pix_fmt", "yuv420p")
+        ffmpeg.add("-c:a", "aac")
+        ffmpeg.add("-b:a", "128k")
+        ffmpeg.add("-ar", "48000")
+        ffmpeg.add(finalOutputFilePath)
+        
+        return ffmpeg.run()
     }
 
     fun stabalize(workingDir: File, inputFilePath: String, trfFilePath: String) {
@@ -60,16 +190,6 @@ class FfmpegUtils {
         ffmpeg.add("-map", "0")
         ffmpeg.add("-movflags", "faststart") // This forces moov atom to the front
         ffmpeg.add(outputFilePath)
-        return ffmpeg.run()
-    }
-
-    fun concat(concatFile: Path, finalOutputFilePath: String, workingDir: File): Int {
-        val ffmpeg = Ffmpeg(workingDir)
-        ffmpeg.add("-y")
-        ffmpeg.add("-f", "concat", "-safe", "0", "-i", concatFile.toString(),
-            "-c", "copy",
-            finalOutputFilePath
-        )
         return ffmpeg.run()
     }
 }

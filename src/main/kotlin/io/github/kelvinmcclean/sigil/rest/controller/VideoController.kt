@@ -35,6 +35,9 @@ class VideoController(
         val jobId = UUID.randomUUID().toString()
         val tmpDir = fileService.saveFilesToTemp(jobId, files)
 
+        // Extract original filenames
+        val originalFilenames = files.map { it.originalFilename ?: "" }.joinToString(",")
+
         val timestampsStr: String = timestamps?.joinToString(",") ?: ""
 
         val params = JobParametersBuilder()
@@ -42,6 +45,7 @@ class VideoController(
             .addString("timestamps", timestampsStr)
             .addString("title", title.orEmpty())
             .addString("fileDirectory", tmpDir)
+            .addString("originalFilenames", originalFilenames)
             .addString("stabilize", java.lang.String.valueOf(stabilize))
             .addLong("launchTime", System.currentTimeMillis()) // Ensures job uniqueness
             .toJobParameters()

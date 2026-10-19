@@ -9,9 +9,10 @@ import io.github.kelvinmcclean.sigil.timestamp.font.FontResolver
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.io.File
+import java.time.Instant as JavaInstant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.TimeZone
-import kotlin.time.Instant
-import kotlin.time.toJavaInstant
 
 @Service
 class TimestampService(
@@ -26,20 +27,52 @@ class TimestampService(
         val workingDir = File(videoJobContext.fileDirectory)
         val userFont= fontConfiguration.path
         val fontOption: String = FontResolver().resolveFont(workingDir.toPath(), userFont)
-        return processTimestamps(videoJobContext.timestamps[index], fontOption)
+        val timestamp = videoJobContext.timestamps[index]
+        val isDateOnly = isDateOnlyTimestamp(timestamp)
+        return processTimestamps(timestamp, fontOption, isDateOnly)
     }
 
     fun getTimestampFilter(videoJobContext: VideoJobContext, timestamp: Long): String {
         val workingDir = File(videoJobContext.fileDirectory)
         val userFont= fontConfiguration.path
         val fontOption: String = FontResolver().resolveFont(workingDir.toPath(), userFont)
-        return processTimestamps(timestamp, fontOption)
+        val isDateOnly = isDateOnlyTimestamp(timestamp)
+        return processTimestamps(timestamp, fontOption, isDateOnly)
+    }
+
+    /**
+     * Check if timestamp represents midnight UTC (i.e., extracted from filename as date only)
+     */
+    private fun isDateOnlyTimestamp(timestamp: Long): Boolean {
+        // Timestamps from filename extraction are set to midnight UTC
+        // which means they are divisible by 86400 (seconds in a day)
+        return timestamp % 86400 == 0L
+    }
+
+    /**
+     * Get a date-only format string by removing time-related format specifiers
+     */
+    private fun getDateOnlyFormat(format: String): String {
+        // Remove time-related format specifiers like %H, %M, %S, %I, etc.
+        // Keep only date specifiers: %Y, %m, %d, %B, %b, etc.
+        val timeSpecifiers = setOf("%H", "%I", "%M", "%S", "%p", "%r", "%T", "%R", "%X", "%Z", "%z")
+        var result = format
+        for (specifier in timeSpecifiers) {
+            result = result.replace(specifier, "")
+        }
+        // Clean up extra spaces and punctuation
+        result = result.replace("  ", " ").trim()
+        return result
     }
 
     fun processTimestamps(timestamp: Long, fontOption: String?): String {
+        return processTimestamps(timestamp, fontOption, false)
+    }
+
+    fun processTimestamps(timestamp: Long, fontOption: String?, isDateOnly: Boolean): String {
         val size = fontConfiguration.size
         val location = fontConfiguration.location
-        val format = fontConfiguration.format
+        val format = if (isDateOnly) getDateOnlyFormat(fontConfiguration.format) else fontConfiguration.format
         return StringBuilder().append(",drawtext=fontfile=$fontOption: text='%{pts\\:localtime\\:")
             .append(timestamp)
             .append(format)
@@ -69,13 +102,15 @@ class TimestampService(
         dateConfiguration: MediaConfiguration.Date
     ): String {
         // if year differs, get both in full
-        val earlyDate =
-            Instant.fromEpochSeconds(earliestTimestamp).toJavaInstant().atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
-        val latestDate =
-            Instant.fromEpochSeconds(latestTimestamp).toJavaInstant().atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
-        val isSameYear = earlyDate.year == latestDate.year
-        val isSameMonth = isSameYear && earlyDate.month == latestDate.month
-        val isSameDay = earlyDate == latestDate // LocalDate equality checks year, month, and day automatically
+        val earlyDateTime = JavaInstant.ofEpochSecond(earliestTimestamp)
+            .atZone(TimeZone.getDefault().toZoneId())
+            .toLocalDate()
+        val latestDateTime = JavaInstant.ofEpochSecond(latestTimestamp)
+            .atZone(TimeZone.getDefault().toZoneId())
+            .toLocalDate()
+        val isSameYear = earlyDateTime.year == latestDateTime.year
+        val isSameMonth = isSameYear && earlyDateTime.month == latestDateTime.month
+        val isSameDay = earlyDateTime == latestDateTime // LocalDate equality checks year, month, and day automatically
         var res = ""
         when {
             (dateConfiguration.splitDay && (!isSameDay && isSameMonth)) -> {
@@ -99,7 +134,9 @@ class TimestampService(
         if (videoJobContext.timestamps.size <= index) {
             val inputFilePath = "_input_$index.mp4"
             val workingDir = File(videoJobContext.fileDirectory)
-            val timestamp = ffmpegUtils.getTimestamp(inputFilePath, workingDir)
+            val originalFilename = if (index < videoJobContext.originalFilenames.size) 
+                videoJobContext.originalFilenames[index] else null
+            val timestamp = ffmpegUtils.getTimestamp(inputFilePath, workingDir, originalFilename)
             videoJobContext.timestamps += timestamp
         }
     }

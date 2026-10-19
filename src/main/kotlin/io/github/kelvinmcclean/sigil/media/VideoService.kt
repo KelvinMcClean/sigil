@@ -70,11 +70,23 @@ class VideoService(val timestampService: TimestampService, val fileService: File
     fun concat(videoJobContext: VideoJobContext) {
         val finalPath = fileService.getFinalPath()
         val workingDir = File(videoJobContext.fileDirectory)
-        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_")} ?: emptyList()
-        val concatFile = FileUtils.createConcatPath(workingDir.toPath(), files.size)
+        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_") }?.sortedBy { it.name } ?: emptyList()
         logger.info { "Final output file path: $finalPath" }
-        // The final concatenation command
-        val exitCode = ffmpegUtils.concat(concatFile, finalPath, workingDir)
+        
+        if (files.isEmpty()) {
+            logger.error { "No processed files found to concatenate" }
+            return
+        }
+        
+        if (files.size == 1) {
+            // Single file, just rename it
+            logger.info { "Only one file, renaming ${files[0].name} to $finalPath" }
+            files[0].renameTo(File(finalPath))
+            return
+        }
+        
+        // Use concat filter with multiple inputs for robust concatenation
+        val exitCode = ffmpegUtils.concatWithFilter(files.map { it.name }.toTypedArray(), finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
     }
 }

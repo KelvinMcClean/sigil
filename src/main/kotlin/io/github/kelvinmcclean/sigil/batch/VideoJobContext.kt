@@ -6,6 +6,7 @@ interface VideoJobContext {
     val title: String
     var timestamps: List<Long>
     val stabilize: Boolean
+    val originalFilenames: List<String>
 }
 
 data class VideoJobContextImpl(
@@ -13,5 +14,6 @@ data class VideoJobContextImpl(
     override val fileDirectory: String,
     override val title: String,
     override var timestamps: List<Long>,
-    override val stabilize: Boolean
+    override val stabilize: Boolean,
+    override val originalFilenames: List<String>
 ) : VideoJobContext
