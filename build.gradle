@@ -130,7 +130,6 @@ node {
     version = '20.11.1'
     npmVersion = '10.2.4'
     workDir = file("${projectDir}/frontend")
-    nodeModulesDir = file("${projectDir}/frontend")
 }
 
 // Frontend build - uses npmInstall task from the plugin
