@@ -156,6 +156,8 @@ function App() {
         fileNames,
         status: 'PROCESSING',
         progress: 0,
+        completedItems: 0,
+        totalItems: fileNames.length,
         createdAt: new Date().toISOString()
       }
     ]);
@@ -189,8 +191,19 @@ function App() {
           if (statusData) {
             const batchStatus = statusData.batchStatus || statusData.status;
             const newStatus = mapBatchStatus(batchStatus);
-            if (newStatus !== job.status) {
-              updateJobStatus(job.id, { status: newStatus });
+            const updates = { status: newStatus };
+            
+            // Update progress counters if available
+            if (statusData.completedItems !== undefined && statusData.totalItems !== undefined) {
+              updates.completedItems = statusData.completedItems;
+              updates.totalItems = statusData.totalItems;
+              updates.progress = statusData.totalItems > 0 
+                ? Math.round((statusData.completedItems / statusData.totalItems) * 100) 
+                : 0;
+            }
+            
+            if (newStatus !== job.status || updates.completedItems !== undefined) {
+              updateJobStatus(job.id, updates);
             }
           }
         }
@@ -386,6 +399,11 @@ function App() {
               <div className="job-files">
                 {job.fileNames.length > 0 && (
                   <span className="job-file-count">{job.fileNames.length} file{job.fileNames.length > 1 ? 's' : ''}</span>
+                )}
+                {job.totalItems && job.completedItems !== undefined && (
+                  <span className="job-progress">
+                    {job.completedItems}/{job.totalItems}
+                  </span>
                 )}
               </div>
               <div className="job-status">{job.status}</div>

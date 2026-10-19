@@ -482,3 +482,10 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+.job-progress {
+  font-size: 0.75rem;
+  color: #3b82f6;
+  margin-left: 8px;
+  font-weight: 600;
+}
