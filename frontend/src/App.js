@@ -11,6 +11,7 @@ function App() {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [jobId, setJobId] = useState(null);
   const [jobs, setJobs] = useState([]);
+  const [sortByTimestamp, setSortByTimestamp] = useState(false);
 
   const handleDragEnter = useCallback((e) => {
     e.preventDefault();
@@ -74,12 +75,10 @@ function App() {
     try {
       const formData = new FormData();
       
-      // Append each file
       files.forEach((file, index) => {
         formData.append('files', file);
       });
       
-      // Append title if provided
       if (title) {
         formData.append('title', title);
       }
@@ -134,6 +133,76 @@ function App() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  const extractTimestampFromFilename = (filename) => {
+    if (!filename) return null;
+    
+    let match;
+    
+    const yyyyMmDdPattern = /\b(\d{4})(\d{2})(\d{2})\b/;
+    match = filename.match(yyyyMmDdPattern);
+    if (match) {
+      try {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        const date = new Date(Date.UTC(year, month, day));
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
+        }
+      } catch (e) {
+        // Invalid date, try next pattern
+      }
+    }
+    
+    const yyyyMmDdSeparatedPattern = /\b(\d{4})[-/](\d{2})[-/](\d{2})\b/;
+    match = filename.match(yyyyMmDdSeparatedPattern);
+    if (match) {
+      try {
+        const year = parseInt(match[1], 10);
+        const month = parseInt(match[2], 10) - 1;
+        const day = parseInt(match[3], 10);
+        const date = new Date(Date.UTC(year, month, day));
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
+        }
+      } catch (e) {
+        // Invalid date
+      }
+    }
+    
+    return null;
+  };
+
+  const getFileTimestamp = (file) => {
+    const filenameTimestamp = extractTimestampFromFilename(file.name);
+    if (filenameTimestamp !== null) {
+      return filenameTimestamp;
+    }
+    
+    if (file.lastModified) {
+      return file.lastModified;
+    }
+    
+    return 0;
+  };
+
+  const getSortedFiles = useCallback((filesToSort) => {
+    if (!sortByTimestamp) {
+      return filesToSort;
+    }
+    
+    return [...filesToSort].sort((a, b) => {
+      const timestampA = getFileTimestamp(a);
+      const timestampB = getFileTimestamp(b);
+      
+      if (timestampA === timestampB) {
+        return a.name.localeCompare(b.name);
+      }
+      
+      return timestampA - timestampB;
+    });
+  }, [sortByTimestamp]);
 
   const fetchJobStatus = useCallback(async (jobId) => {
     try {
@@ -222,6 +291,8 @@ function App() {
     return 'PROCESSING';
   };
 
+  const sortedFiles = getSortedFiles(files);
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -287,9 +358,18 @@ function App() {
 
           {files.length > 0 && (
             <div className="file-list">
-              <h4>Selected Files:</h4>
+              <h4>Selected Files:
+                <label className="sort-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={sortByTimestamp}
+                    onChange={(e) => setSortByTimestamp(e.target.checked)}
+                  />
+                  <span className="checkbox-label">Sort by timestamp</span>
+                </label>
+              </h4>
               <ul>
-                {files.map((file, index) => (
+                {sortedFiles.map((file, index) => (
                   <li key={index} className="file-item">
                     <span className="file-name">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -301,7 +381,7 @@ function App() {
                     <span className="file-size">{formatFileSize(file.size)}</span>
                     <button 
                       type="button" 
-                      onClick={() => removeFile(index)}
+                      onClick={() => removeFile(files.indexOf(file))}
                       className="remove-btn"
                       title="Remove"
                     >
