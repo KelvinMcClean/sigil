@@ -2,8 +2,13 @@ buildscript {
     repositories {
         mavenCentral()
         google()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.github.node-gradle:gradle-node-plugin:6.0.0'
     }
 }
+
 plugins {
     id 'groovy'
     id 'org.jetbrains.kotlin.jvm' version '2.3.21'
@@ -13,10 +18,10 @@ plugins {
     id 'java-test-fixtures'
     id 'idea'
     id 'jvm-test-suite'
-
 }
 
 apply plugin: 'java'
+apply plugin: 'com.github.node-gradle.node'
 
 group = 'io.github.kelvinmcclean'
 version = '0.0.1-SNAPSHOT'
@@ -118,4 +123,44 @@ clean.doLast {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Node plugin configuration - will download Node 20.11.1 and npm 10.2.4
+node {
+    version = '20.11.1'
+    npmVersion = '10.2.4'
+}
+
+// Custom npm install task for frontend
+task npmInstallFrontend(type: NpmTask) {
+    workingDir = file("${projectDir}/frontend")
+    args = ['install']
+}
+
+// Frontend build - uses custom npmInstallFrontend
+task buildFrontendProduction(type: NpmTask) {
+    workingDir = file("${projectDir}/frontend")
+    dependsOn npmInstallFrontend
+    args = ['run', 'build']
+    // Pass CI=false to skip ESLint treating warnings as errors
+    setEnvironment(['CI': 'false'])
+}
+
+// Copy built frontend to resources
+task copyFrontendToResources(type: Copy) {
+    from "${projectDir}/frontend/build"
+    into "${projectDir}/src/main/resources/static"
+    dependsOn buildFrontendProduction
+}
+
+// Make the frontend build part of the main build process
+processResources.dependsOn copyFrontendToResources
+
+// Clean frontend build artifacts
+clean.doLast {
+    try {
+        fileTree("${projectDir}/frontend/build").forEach { it.delete() }
+    } catch (Exception e) {
+        logger.warn("Failed to delete frontend build files: ${e.message}")
+    }
 }
