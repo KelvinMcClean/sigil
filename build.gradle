@@ -119,3 +119,33 @@ clean.doLast {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// Frontend build task
+ task buildFrontend(type: Exec) {
+    workingDir "${projectDir}/frontend"
+    commandLine 'npm', 'install'
+}
+
+ task buildFrontendProduction(type: Exec) {
+    workingDir "${projectDir}/frontend"
+    commandLine 'npm', 'run', 'build'
+    dependsOn buildFrontend
+}
+
+ task copyFrontendToResources(type: Copy) {
+    from "${projectDir}/frontend/build"
+    into "${projectDir}/src/main/resources"
+    dependsOn buildFrontendProduction
+}
+
+// Make the frontend build part of the main build process
+ processResources.dependsOn copyFrontendToResources
+
+// Clean frontend build artifacts
+ clean.doLast {
+    try {
+        fileTree("${projectDir}/frontend/build").forEach { it.delete() }
+    } catch (Exception e) {
+        logger.warn("Failed to delete frontend build files: ${e.message}")
+    }
+}
