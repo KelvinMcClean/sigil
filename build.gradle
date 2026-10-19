@@ -16,11 +16,11 @@ plugins {
     id 'java-test-fixtures'
     id 'idea'
     id 'jvm-test-suite'
-    id 'com.github.node-gradle.node'
 
 }
 
 apply plugin: 'java'
+apply plugin: 'com.github.node-gradle.node'
 
 group = 'io.github.kelvinmcclean'
 version = '0.0.1-SNAPSHOT'
