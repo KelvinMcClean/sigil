@@ -49,12 +49,11 @@ class VideoController(
             timestamps
         }
 
-        val tmpDir = fileService.saveFilesToTemp(jobId, orderedFiles)
-
-        // Extract original filenames
-        val originalFilenames = orderedFiles.mapIndexed { index, file ->
-            FileUtils.sanitizeFilename(file.originalFilename ?: "video_$index.mp4")
-        }.joinToString(",")
+        val storageFilenames = orderedFiles.mapIndexed { index, file ->
+            "${UUID.randomUUID()}_${FileUtils.sanitizeFilename(file.originalFilename ?: "video_$index.mp4") }"
+        }
+        val tmpDir = fileService.saveFilesToTemp(jobId, orderedFiles, storageFilenames)
+        val originalFilenames = storageFilenames.joinToString(",")
 
         val timestampsStr: String = orderedTimestamps?.joinToString(",") ?: ""
 

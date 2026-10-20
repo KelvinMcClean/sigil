@@ -20,12 +20,19 @@ class FileService(var mediaConfiguration: MediaConfiguration, var timestampServi
 
     @Throws(FileNotFoundException::class, IOException::class)
     fun saveFilesToTemp(id: String, files: Array<MultipartFile> ): String {
+        val names = files.mapIndexed { index, file ->
+            "${java.util.UUID.randomUUID()}_${FileUtils.sanitizeFilename(file.originalFilename ?: "video_$index.mp4") }"
+        }
+        return saveFilesToTemp(id, files, names)
+    }
+
+    fun saveFilesToTemp(id: String, files: Array<MultipartFile>, storageNames: List<String>): String {
 
         val tmpDir = FileUtils.getTmpDir(id)
         logger.info { "Temporary directory for job $id: $tmpDir" }
 
         val tmpPath = Paths.get(tmpDir)
-        FileUtils.transfer(files, tmpPath)
+        FileUtils.transfer(files, tmpPath, storageNames)
         logger.info { "Files saved: $tmpPath" }
 
         return tmpDir

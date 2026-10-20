@@ -60,10 +60,13 @@ class VideoService(val timestampService: TimestampService, val fileService: File
 
             if (repairExitCode == 0) {
                 logger.info { "Repair successful, retrying processing..." }
-                ffmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
+                exitCode = ffmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
             } else {
                 logger.error { "Repair failed for file ${file.name}" }
             }
+        }
+        if (exitCode != 0 || !File(workingDir, outputFilePath).isFile) {
+            throw IllegalStateException("Unable to process video file ${file.name}; FFmpeg exit code: $exitCode")
         }
         logger.info { "Completed render for file: ${file.name}" }
     }
@@ -104,5 +107,8 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         // Use concat demuxer
         val exitCode = ffmpegUtils.concat(fileListPath.toPath(), finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
+        if (exitCode != 0 || !File(finalPath).isFile) {
+            throw IllegalStateException("Unable to concatenate processed videos; FFmpeg exit code: $exitCode")
+        }
     }
 }

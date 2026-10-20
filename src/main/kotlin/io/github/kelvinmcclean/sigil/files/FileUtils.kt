@@ -55,9 +55,18 @@ class FileUtils {
         }
 
         @JvmStatic
+        @Throws(IOException::class)
+        fun transfer(files: Array<MultipartFile>, tmpPath: Path, storageNames: List<String>) {
+            require(files.size == storageNames.size) { "Each upload must have one storage filename" }
+            files.zip(storageNames).forEach { (file, storageName) ->
+                file.transferTo(tmpPath.resolve(sanitizeFilename(storageName)))
+            }
+        }
+
+        @JvmStatic
         fun sanitizeFilename(filename: String): String {
             // Remove path separators and invalid characters for cross-platform safety
-            return filename.replace("[/\\:*?\"<>|]+".toRegex(), "_")
+            return filename.replace("[/\\:*?\"<>|,\\r\\n]+".toRegex(), "_")
         }
     }
 }
