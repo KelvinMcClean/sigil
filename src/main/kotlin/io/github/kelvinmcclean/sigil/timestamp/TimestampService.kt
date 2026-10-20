@@ -77,6 +77,7 @@ class TimestampService(
         val format = if (isDateOnly) getDateOnlyFormat(fontConfiguration.format) else fontConfiguration.format
         return StringBuilder().append(",drawtext=fontfile=$fontOption: text='%{pts\\:localtime\\:")
             .append(timestamp)
+            .append("\\:")
             .append(format)
             .append("': x=${location.x}: y=${location.y}: fontcolor=white: fontsize=${size}: box=1: boxcolor=black@0.5").toString()
     }
