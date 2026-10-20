@@ -133,39 +133,48 @@ class TimestampService(
         return res
     }
 
-    fun buildTimestamps(videoJobContext: VideoJobContext, index: Int) {
-        if (videoJobContext.timestamps.size <= index) {
-            val inputFilePath = "_input_$index.mp4"
-            val workingDir = File(videoJobContext.fileDirectory)
-            val originalFilename = if (index < videoJobContext.originalFilenames.size) 
-                videoJobContext.originalFilenames[index] else null
-            val timestamp = ffmpegUtils.getTimestamp(inputFilePath, workingDir, originalFilename)
-            videoJobContext.timestamps += timestamp
+    fun buildTimestamps(videoJobContext: VideoJobContext, filename: String) {
+        if (videoJobContext.filenameToTimestamp.containsKey(filename)) {
+            return
         }
+        val workingDir = File(videoJobContext.fileDirectory)
+        val timestamp = ffmpegUtils.getTimestamp(filename, workingDir, filename)
+        videoJobContext.filenameToTimestamp += (filename to timestamp)
+        videoJobContext.timestamps += timestamp
+    }
 
-        if (index == videoJobContext.fileCount.toInt() - 1) {
-            sortInputsByTimestamp(videoJobContext)
+    fun getTimestampForFilename(videoJobContext: VideoJobContext, filename: String): Long {
+        return videoJobContext.filenameToTimestamp[filename] ?: 0L
+    }
+
+    fun buildAllTimestamps(videoJobContext: VideoJobContext) {
+        val workingDir = File(videoJobContext.fileDirectory)
+        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") } ?: emptyArray()
+        files.forEach { file ->
+            buildTimestamps(videoJobContext, file.name)
         }
     }
 
     private fun sortInputsByTimestamp(videoJobContext: VideoJobContext) {
-        if (videoJobContext.timestamps.size != videoJobContext.fileCount.toInt()) return
-
         val workingDir = File(videoJobContext.fileDirectory)
-        val sortedIndices = videoJobContext.timestamps.indices.sortedBy { videoJobContext.timestamps[it] }
-        val temporaryFiles = sortedIndices.mapIndexed { sortedIndex, originalIndex ->
-            val source = File(workingDir, "_input_$originalIndex.mp4")
-            val temporary = File(workingDir, "_sorted_input_$sortedIndex.mp4")
-            if (!source.renameTo(temporary)) {
-                throw IllegalStateException("Unable to stage ${source.name} for timestamp sorting")
+        val sortedEntries = videoJobContext.filenameToTimestamp.entries.sortedBy { it.value }
+        
+        sortedEntries.forEachIndexed { sortedIndex, entry ->
+            val originalFilename = entry.key
+            val source = File(workingDir, originalFilename)
+            val targetName = "_input_$sortedIndex.mp4"
+            val temporary = File(workingDir, "_sorted_$sortedIndex.mp4")
+            
+            if (source.exists()) {
+                if (!source.renameTo(temporary)) {
+                    throw IllegalStateException("Unable to stage ${source.name} for timestamp sorting")
+                }
+                if (!temporary.renameTo(File(workingDir, targetName))) {
+                    throw IllegalStateException("Unable to apply timestamp order to ${temporary.name}")
+                }
             }
-            temporary
         }
-        temporaryFiles.forEachIndexed { sortedIndex, temporary ->
-            if (!temporary.renameTo(File(workingDir, "_input_$sortedIndex.mp4"))) {
-                throw IllegalStateException("Unable to apply timestamp order to ${temporary.name}")
-            }
-        }
-        videoJobContext.timestamps = sortedIndices.map { videoJobContext.timestamps[it] }
+        
+        videoJobContext.timestamps = sortedEntries.map { it.value }
     }
 }
