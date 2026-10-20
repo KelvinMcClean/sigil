@@ -26,12 +26,13 @@ class VideoController(
     var logger = KotlinLogging.logger {}
 
     @PostMapping("/process", consumes = ["multipart/form-data"])
+    @JvmOverloads
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
         @RequestParam(value = "title", required = false) title: String?,
         @RequestParam(value = "stabilize", defaultValue = "false", required = false) stabilize: Boolean,
-        @RequestParam(value = "sortByTimestamp", defaultValue = "false", required = false) sortByTimestamp: Boolean): ResponseEntity<JobStatusResponse> {
+        @RequestParam(value = "sortByTimestamp", defaultValue = "false", required = false) sortByTimestamp: Boolean = false): ResponseEntity<JobStatusResponse> {
 
         // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()

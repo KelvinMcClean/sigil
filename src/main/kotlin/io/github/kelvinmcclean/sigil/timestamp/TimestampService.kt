@@ -87,10 +87,10 @@ class TimestampService(
     }
 
     fun getLatestTimestamp(): Long {
-        return videoJobContext.timestamps.maxByOrNull { it.toInt() }!!
+        return videoJobContext.timestamps.maxOrNull()!!
     }
     fun getEarliestTimestamp(): Long {
-        return videoJobContext.timestamps.minByOrNull { it.toInt() }!!
+        return videoJobContext.timestamps.minOrNull()!!
     }
 
     fun resolveTextTimestamp(): String {
