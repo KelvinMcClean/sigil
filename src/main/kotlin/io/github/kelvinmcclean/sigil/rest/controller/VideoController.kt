@@ -33,12 +33,26 @@ class VideoController(
 
         // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()
-        val tmpDir = fileService.saveFilesToTemp(jobId, files)
+        val orderedFiles = if (timestamps != null && timestamps.size == files.size) {
+            files.indices
+                .sortedBy { timestamps[it] }
+                .map { files[it] }
+                .toTypedArray()
+        } else {
+            files
+        }
+        val orderedTimestamps = if (timestamps != null && timestamps.size == files.size) {
+            files.indices.sortedBy { timestamps[it] }.map { timestamps[it] }.toTypedArray()
+        } else {
+            timestamps
+        }
+
+        val tmpDir = fileService.saveFilesToTemp(jobId, orderedFiles)
 
         // Extract original filenames
-        val originalFilenames = files.map { it.originalFilename ?: "" }.joinToString(",")
+        val originalFilenames = orderedFiles.map { it.originalFilename ?: "" }.joinToString(",")
 
-        val timestampsStr: String = timestamps?.joinToString(",") ?: ""
+        val timestampsStr: String = orderedTimestamps?.joinToString(",") ?: ""
 
         val params = JobParametersBuilder()
             .addLong("fileCount", files.size.toLong())

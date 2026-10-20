@@ -60,6 +60,8 @@ class TimestampService(
         for (specifier in timeSpecifiers) {
             result = result.replace(specifier, "")
         }
+        // Remove escaped separators left behind after stripping time fields (for example, \:%H\:%M\:%S).
+        result = result.replace(Regex("\\\\+:"), "")
         // Clean up extra spaces and punctuation
         result = result.replace("  ", " ").trim()
         return result
@@ -139,5 +141,30 @@ class TimestampService(
             val timestamp = ffmpegUtils.getTimestamp(inputFilePath, workingDir, originalFilename)
             videoJobContext.timestamps += timestamp
         }
+
+        if (index == videoJobContext.fileCount.toInt() - 1) {
+            sortInputsByTimestamp(videoJobContext)
+        }
+    }
+
+    private fun sortInputsByTimestamp(videoJobContext: VideoJobContext) {
+        if (videoJobContext.timestamps.size != videoJobContext.fileCount.toInt()) return
+
+        val workingDir = File(videoJobContext.fileDirectory)
+        val sortedIndices = videoJobContext.timestamps.indices.sortedBy { videoJobContext.timestamps[it] }
+        val temporaryFiles = sortedIndices.mapIndexed { sortedIndex, originalIndex ->
+            val source = File(workingDir, "_input_$originalIndex.mp4")
+            val temporary = File(workingDir, "_sorted_input_$sortedIndex.mp4")
+            if (!source.renameTo(temporary)) {
+                throw IllegalStateException("Unable to stage ${source.name} for timestamp sorting")
+            }
+            temporary
+        }
+        temporaryFiles.forEachIndexed { sortedIndex, temporary ->
+            if (!temporary.renameTo(File(workingDir, "_input_$sortedIndex.mp4"))) {
+                throw IllegalStateException("Unable to apply timestamp order to ${temporary.name}")
+            }
+        }
+        videoJobContext.timestamps = sortedIndices.map { videoJobContext.timestamps[it] }
     }
 }

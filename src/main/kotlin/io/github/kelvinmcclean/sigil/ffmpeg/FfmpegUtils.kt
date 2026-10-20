@@ -17,11 +17,17 @@ class FfmpegUtils {
         ffmpeg.add(inputFilePath)
         // Use format filter for robust conversion
         ffmpeg.add("-vf")
-        ffmpeg.add("format=yuv420p," + filterGraph.toString())
+        // Give every intermediate the same frame cadence and start timestamps at zero.
+        // The concat demuxer copies streams, so differing input frame rates/time bases
+        // otherwise cause later clips to freeze or play at the wrong speed.
+        ffmpeg.add("format=yuv420p," + filterGraph.toString() + ",fps=30")
         ffmpeg.add("-c:v", "libx264")
         ffmpeg.add("-pix_fmt", "yuv420p") // Add this explicitly to handle HEVC/MOV compatibility
         ffmpeg.add("-c:a", "aac")
         ffmpeg.add("-ar", "48000")
+        ffmpeg.add("-r", "30")
+        ffmpeg.add("-fps_mode", "cfr")
+        ffmpeg.add("-avoid_negative_ts", "make_zero")
         // Explicitly force mapping to ensure we don't carry over unsupported streams.
         // Audio is optional ('?') so that silent clips don't abort the whole render.
         ffmpeg.add("-map", "0:v:0")
