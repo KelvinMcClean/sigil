@@ -74,6 +74,18 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_") }?.sortedBy { it.name } ?: emptyList()
         logger.info { "Final output file path: $finalPath" }
         
+        // Check if we have all expected processed files
+        val expectedCount = videoJobContext.fileCount.toInt()
+        if (files.size < expectedCount) {
+            logger.error { "Missing processed files: expected $expectedCount, found ${files.size}" }
+            val expectedFiles = (0 until expectedCount).map { "_processed_$it.mp4" }
+            val missingFiles = expectedFiles.filter { expected ->
+                files.none { it.name == expected }
+            }
+            logger.error { "Missing files: ${missingFiles.joinToString(", ")}" }
+            throw IllegalStateException("Missing processed files: expected $expectedCount, found ${files.size}. Missing: ${missingFiles.joinToString(", ")}")
+        }
+        
         // Create the file list for concat demuxer
         val fileListPath = workingDir.resolve("_fileList.txt")
         fileListPath.writeText(files.joinToString("\n") { "file '${it.name}'" })
