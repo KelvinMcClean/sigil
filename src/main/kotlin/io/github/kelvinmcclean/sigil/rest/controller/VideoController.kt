@@ -26,7 +26,6 @@ class VideoController(
     var logger = KotlinLogging.logger {}
 
     @PostMapping("/process", consumes = ["multipart/form-data"])
-    @JvmOverloads
     fun process(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,

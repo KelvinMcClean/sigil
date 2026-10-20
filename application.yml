@@ -34,7 +34,7 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 sigil:
   font:
-    size: 48
+    size: 64
     format: "\\:%a %Y-%m-%d %H\\\\\\:%M\\\\\\:%S}"
     path: fonts/RealVhsFont-Normalised.ttf
     location:

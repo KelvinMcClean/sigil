@@ -191,7 +191,10 @@ class FfmpegUtils {
         ffmpeg.add("-y")
         ffmpeg.add("-i", inputFilePath)
         ffmpeg.add("-c", "copy") // Just copy the streams, don't re-encode
-        ffmpeg.add("-map", "0")
+        // Inputs can contain data/metadata streams with no codec (codec=none),
+        // which MP4 cannot mux. Keep only the primary video and optional audio.
+        ffmpeg.add("-map", "0:v:0")
+        ffmpeg.add("-map", "0:a:0?")
         ffmpeg.add("-movflags", "faststart") // This forces moov atom to the front
         ffmpeg.add(outputFilePath)
         return ffmpeg.run()

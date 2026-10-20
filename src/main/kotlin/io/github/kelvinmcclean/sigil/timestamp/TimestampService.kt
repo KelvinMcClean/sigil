@@ -78,11 +78,17 @@ class TimestampService(
     fun processTimestamps(timestamp: Long, fontOption: String?, isDateOnly: Boolean): String {
         val size = fontConfiguration.size
         val location = fontConfiguration.location
-        val format = if (isDateOnly) getDateOnlyFormat(fontConfiguration.format) else fontConfiguration.format
-        return StringBuilder().append(",drawtext=fontfile=$fontOption: text='%{pts\\:localtime\\:")
-            .append(timestamp)
-            .append("\\:")
-            .append(format)
+        val configuredFormat = if (isDateOnly) getDateOnlyFormat(fontConfiguration.format) else fontConfiguration.format
+        // The format may include the closing brace from the legacy configuration value.
+        val format = configuredFormat.removeSuffix("}")
+        val timestampText = StringBuilder("%{pts\\:localtime\\:$timestamp")
+        if (!format.startsWith("\\:") && !format.startsWith(":")) {
+            timestampText.append("\\:")
+        }
+        timestampText.append(format).append("}")
+
+        return StringBuilder().append(",drawtext=fontfile=$fontOption: text='")
+            .append(timestampText)
             .append("': x=${location.x}: y=${location.y}: fontcolor=white: fontsize=${size}: box=1: boxcolor=black@0.5").toString()
     }
 
