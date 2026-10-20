@@ -15,14 +15,14 @@ class VideoService(val timestampService: TimestampService, val fileService: File
 
     private final val logger = KotlinLogging.logger {}
 
-    fun preprocess(videoJobContext: VideoJobContext, index: Int) {
+    fun preprocess(videoJobContext: VideoJobContext, filename: String) {
         val stabilize = videoJobContext.stabilize
         val workingDir = File(videoJobContext.fileDirectory)
-        val file = workingDir.listFiles()?.find { it.isFile && it.name == "_input_${index}.mp4" } ?: return
+        val file = workingDir.listFiles()?.find { it.isFile && it.name == filename } ?: return
         logger.info { "Processing file: ${file.name}" }
-        val inputFilePath = "_input_$index.mp4"
-        val outputFilePath = "_processed_$index.mp4"
-        val trfFilePath = "_transforms_$index.trf"
+        val inputFilePath = filename
+        val outputFilePath = "processed_${filename}"
+        val trfFilePath = "transforms_${filename.replace(".mp4", ".trf")}"
         // Initialize the base filter string
         val filterGraph = StringBuilder()
 
@@ -40,9 +40,9 @@ class VideoService(val timestampService: TimestampService, val fileService: File
             .append("pad=1920:1080:(ow-iw)/2:(oh-ih)/2,")
             .append("setsar=1")
 
-        if (videoJobContext.timestamps.isNotEmpty()) {
+        if (videoJobContext.filenameToTimestamp.isNotEmpty()) {
             logger.info { "Processing timestamps for file: ${file.name}" }
-            val timestamps = timestampService.getTimestampFilter(videoJobContext, index)
+            val timestamps = timestampService.getTimestampFilter(videoJobContext, filename)
             filterGraph.append(timestamps)
         }
 
@@ -71,24 +71,29 @@ class VideoService(val timestampService: TimestampService, val fileService: File
     fun concat(videoJobContext: VideoJobContext) {
         val finalPath = fileService.getFinalPath()
         val workingDir = File(videoJobContext.fileDirectory)
-        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_") }?.sortedBy { it.name } ?: emptyList()
+        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("processed_") }?.toList() ?: emptyList()
         logger.info { "Final output file path: $finalPath" }
         
         // Check if we have all expected processed files
         val expectedCount = videoJobContext.fileCount.toInt()
         if (files.size < expectedCount) {
             logger.error { "Missing processed files: expected $expectedCount, found ${files.size}" }
-            val expectedFiles = (0 until expectedCount).map { "_processed_$it.mp4" }
-            val missingFiles = expectedFiles.filter { expected ->
-                files.none { it.name == expected }
+            val missingFiles = videoJobContext.filenameToTimestamp.keys.filter { filename ->
+                files.none { it.name == "processed_$filename" }
             }
             logger.error { "Missing files: ${missingFiles.joinToString(", ")}" }
             throw IllegalStateException("Missing processed files: expected $expectedCount, found ${files.size}. Missing: ${missingFiles.joinToString(", ")}")
         }
         
+        // Sort files by timestamp for correct ordering
+        val sortedFiles = files.sortedBy { file ->
+            val originalName = file.name.removePrefix("processed_")
+            videoJobContext.filenameToTimestamp[originalName] ?: Long.MAX_VALUE
+        }
+        
         // Create the file list for concat demuxer
         val fileListPath = workingDir.resolve("_fileList.txt")
-        fileListPath.writeText(files.joinToString("\n") { "file '${it.name}'" })
+        fileListPath.writeText(sortedFiles.joinToString("\n") { "file '${it.name}'" })
         
         // Use concat demuxer
         val exitCode = ffmpegUtils.concat(fileListPath.toPath(), finalPath, workingDir)
