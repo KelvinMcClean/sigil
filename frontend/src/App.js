@@ -78,6 +78,7 @@ function App() {
       files.forEach((file, index) => {
         formData.append('files', file);
       });
+      formData.append('sortByTimestamp', String(sortByTimestamp));
       
       if (title) {
         formData.append('title', title);
@@ -124,7 +125,7 @@ function App() {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [files, title]);
+  }, [files, title, sortByTimestamp]);
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';

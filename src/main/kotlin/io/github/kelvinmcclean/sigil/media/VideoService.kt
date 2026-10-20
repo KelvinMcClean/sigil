@@ -86,9 +86,15 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         }
         
         // Sort files by timestamp for correct ordering
-        val sortedFiles = files.sortedBy { file ->
-            val originalName = file.name.removePrefix("processed_")
-            videoJobContext.filenameToTimestamp[originalName] ?: Long.MAX_VALUE
+        val sortedFiles = if (videoJobContext.sortByTimestamp) {
+            files.sortedWith(compareBy<File> { file ->
+                val originalName = file.name.removePrefix("processed_")
+                videoJobContext.filenameToTimestamp[originalName] ?: Long.MAX_VALUE
+            }.thenBy { it.name })
+        } else {
+            videoJobContext.originalFilenames.mapNotNull { original ->
+                files.find { it.name == "processed_$original" }
+            }
         }
         
         // Create the file list for concat demuxer

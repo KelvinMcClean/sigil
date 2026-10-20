@@ -40,6 +40,10 @@ class TimestampService(
         return processTimestamps(timestamp, fontOption, isDateOnly)
     }
 
+    fun getTimestampFilter(videoJobContext: VideoJobContext, filename: String): String {
+        return getTimestampFilter(videoJobContext, getTimestampForFilename(videoJobContext, filename))
+    }
+
     /**
      * Check if timestamp represents midnight UTC (i.e., extracted from filename as date only)
      */
@@ -149,32 +153,10 @@ class TimestampService(
 
     fun buildAllTimestamps(videoJobContext: VideoJobContext) {
         val workingDir = File(videoJobContext.fileDirectory)
-        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") } ?: emptyArray()
+        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") } ?: emptyList()
         files.forEach { file ->
             buildTimestamps(videoJobContext, file.name)
         }
     }
 
-    private fun sortInputsByTimestamp(videoJobContext: VideoJobContext) {
-        val workingDir = File(videoJobContext.fileDirectory)
-        val sortedEntries = videoJobContext.filenameToTimestamp.entries.sortedBy { it.value }
-        
-        sortedEntries.forEachIndexed { sortedIndex, entry ->
-            val originalFilename = entry.key
-            val source = File(workingDir, originalFilename)
-            val targetName = "_input_$sortedIndex.mp4"
-            val temporary = File(workingDir, "_sorted_$sortedIndex.mp4")
-            
-            if (source.exists()) {
-                if (!source.renameTo(temporary)) {
-                    throw IllegalStateException("Unable to stage ${source.name} for timestamp sorting")
-                }
-                if (!temporary.renameTo(File(workingDir, targetName))) {
-                    throw IllegalStateException("Unable to apply timestamp order to ${temporary.name}")
-                }
-            }
-        }
-        
-        videoJobContext.timestamps = sortedEntries.map { it.value }
-    }
 }
