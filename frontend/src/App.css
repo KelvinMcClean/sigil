@@ -129,6 +129,28 @@
   margin: 0 0 1rem 0;
   color: #333;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sort-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.sort-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  color: #666;
+  cursor: pointer;
 }
 
 .file-list ul {

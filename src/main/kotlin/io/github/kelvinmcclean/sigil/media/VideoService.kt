@@ -8,20 +8,21 @@ import io.github.kelvinmcclean.sigil.timestamp.TimestampService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.io.File
+import java.nio.file.Path
 
 @Service
 class VideoService(val timestampService: TimestampService, val fileService: FileService, val ffmpegUtils: FfmpegUtils) {
 
     private final val logger = KotlinLogging.logger {}
 
-    fun preprocess(videoJobContext: VideoJobContext, index: Int) {
+    fun preprocess(videoJobContext: VideoJobContext, filename: String) {
         val stabilize = videoJobContext.stabilize
         val workingDir = File(videoJobContext.fileDirectory)
-        val file = workingDir.listFiles()?.find { it.isFile && it.name == "_input_${index}.mp4" } ?: return
-        logger.info {"Processing file: ${file.name}"}
-        val inputFilePath = "_input_$index.mp4"
-        val outputFilePath = "_processed_$index.mp4"
-        val trfFilePath = "_transforms_$index.trf"
+        val file = workingDir.listFiles()?.find { it.isFile && it.name == filename } ?: return
+        logger.info { "Processing file: ${file.name}" }
+        val inputFilePath = filename
+        val outputFilePath = "processed_${filename}"
+        val trfFilePath = "transforms_${filename.replace(".mp4", ".trf")}"
         // Initialize the base filter string
         val filterGraph = StringBuilder()
 
@@ -39,9 +40,9 @@ class VideoService(val timestampService: TimestampService, val fileService: File
             .append("pad=1920:1080:(ow-iw)/2:(oh-ih)/2,")
             .append("setsar=1")
 
-        if (videoJobContext.timestamps.isNotEmpty()) {
+        if (videoJobContext.filenameToTimestamp.isNotEmpty()) {
             logger.info { "Processing timestamps for file: ${file.name}" }
-            val timestamps = timestampService.getTimestampFilter(videoJobContext, index)
+            val timestamps = timestampService.getTimestampFilter(videoJobContext, filename)
             filterGraph.append(timestamps)
         }
 
@@ -59,10 +60,13 @@ class VideoService(val timestampService: TimestampService, val fileService: File
 
             if (repairExitCode == 0) {
                 logger.info { "Repair successful, retrying processing..." }
-                ffmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
+                exitCode = ffmpegUtils.preprocess(filterGraph, repairedPath, outputFilePath, workingDir)
             } else {
                 logger.error { "Repair failed for file ${file.name}" }
             }
+        }
+        if (exitCode != 0 || !File(workingDir, outputFilePath).isFile) {
+            throw IllegalStateException("Unable to process video file ${file.name}; FFmpeg exit code: $exitCode")
         }
         logger.info { "Completed render for file: ${file.name}" }
     }
@@ -70,11 +74,41 @@ class VideoService(val timestampService: TimestampService, val fileService: File
     fun concat(videoJobContext: VideoJobContext) {
         val finalPath = fileService.getFinalPath()
         val workingDir = File(videoJobContext.fileDirectory)
-        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("_processed_")} ?: emptyList()
-        val concatFile = FileUtils.createConcatPath(workingDir.toPath(), files.size)
+        val files = workingDir.listFiles()?.filter { it.isFile && it.name.endsWith(".mp4") && it.name.startsWith("processed_") }?.toList() ?: emptyList()
         logger.info { "Final output file path: $finalPath" }
-        // The final concatenation command
-        val exitCode = ffmpegUtils.concat(concatFile, finalPath, workingDir)
+        
+        // Check if we have all expected processed files
+        val expectedCount = videoJobContext.fileCount.toInt()
+        if (files.size < expectedCount) {
+            logger.error { "Missing processed files: expected $expectedCount, found ${files.size}" }
+            val missingFiles = videoJobContext.filenameToTimestamp.keys.filter { filename ->
+                files.none { it.name == "processed_$filename" }
+            }
+            logger.error { "Missing files: ${missingFiles.joinToString(", ")}" }
+            throw IllegalStateException("Missing processed files: expected $expectedCount, found ${files.size}. Missing: ${missingFiles.joinToString(", ")}")
+        }
+        
+        // Sort files by timestamp for correct ordering
+        val sortedFiles = if (videoJobContext.sortByTimestamp) {
+            files.sortedWith(compareBy<File> { file ->
+                val originalName = file.name.removePrefix("processed_")
+                videoJobContext.filenameToTimestamp[originalName] ?: Long.MAX_VALUE
+            }.thenBy { it.name })
+        } else {
+            videoJobContext.originalFilenames.mapNotNull { original ->
+                files.find { it.name == "processed_$original" }
+            }
+        }
+        
+        // Create the file list for concat demuxer
+        val fileListPath = workingDir.resolve("_fileList.txt")
+        fileListPath.writeText(sortedFiles.joinToString("\n") { "file '${it.name}'" })
+        
+        // Use concat demuxer
+        val exitCode = ffmpegUtils.concat(fileListPath.toPath(), finalPath, workingDir)
         logger.info { "FFmpeg concatenation process exited with code: $exitCode" }
+        if (exitCode != 0 || !File(finalPath).isFile) {
+            throw IllegalStateException("Unable to concatenate processed videos; FFmpeg exit code: $exitCode")
+        }
     }
 }

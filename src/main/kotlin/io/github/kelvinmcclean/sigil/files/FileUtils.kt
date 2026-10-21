@@ -45,12 +45,28 @@ class FileUtils {
         fun transfer(files: Array<MultipartFile>, tmpPath: Path) {
             for ((i, element) in files.withIndex()) {
                 val file = element
-                // Construct the target path: e.g., /temp/12345-uuid_input_0.mp4
-                val destinationPath: Path = tmpPath.resolve("_input_$i.mp4")
+                // Use sanitized original filename instead of numeric index
+                val safeName = sanitizeFilename(file.originalFilename ?: "video_$i.mp4")
+                val destinationPath: Path = tmpPath.resolve(safeName)
 
                 // Transfer the file stream directly to disk
                 file.transferTo(destinationPath)
             }
+        }
+
+        @JvmStatic
+        @Throws(IOException::class)
+        fun transfer(files: Array<MultipartFile>, tmpPath: Path, storageNames: List<String>) {
+            require(files.size == storageNames.size) { "Each upload must have one storage filename" }
+            files.zip(storageNames).forEach { (file, storageName) ->
+                file.transferTo(tmpPath.resolve(sanitizeFilename(storageName)))
+            }
+        }
+
+        @JvmStatic
+        fun sanitizeFilename(filename: String): String {
+            // Remove path separators and invalid characters for cross-platform safety
+            return filename.replace("[/\\:*?\"<>|,\\r\\n]+".toRegex(), "_")
         }
     }
 }

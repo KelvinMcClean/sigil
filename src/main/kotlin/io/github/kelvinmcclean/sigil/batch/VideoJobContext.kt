@@ -6,6 +6,9 @@ interface VideoJobContext {
     val title: String
     var timestamps: List<Long>
     val stabilize: Boolean
+    val sortByTimestamp: Boolean
+    val originalFilenames: List<String>
+    var filenameToTimestamp: Map<String, Long>
 }
 
 data class VideoJobContextImpl(
@@ -13,5 +16,8 @@ data class VideoJobContextImpl(
     override val fileDirectory: String,
     override val title: String,
     override var timestamps: List<Long>,
-    override val stabilize: Boolean
+    override val stabilize: Boolean,
+    override val sortByTimestamp: Boolean = false,
+    override val originalFilenames: List<String>,
+    override var filenameToTimestamp: Map<String, Long> = emptyMap()
 ) : VideoJobContext

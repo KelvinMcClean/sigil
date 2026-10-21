@@ -1,6 +1,7 @@
 package io.github.kelvinmcclean.sigil.rest.controller
 
 import io.github.kelvinmcclean.sigil.files.FileService
+import io.github.kelvinmcclean.sigil.files.FileUtils
 import io.github.kelvinmcclean.sigil.rest.status.JobStatusResponse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.batch.core.job.Job
@@ -29,20 +30,41 @@ class VideoController(
         @RequestParam("files") files: Array<MultipartFile>,
         @RequestParam(value = "timestamps", required = false) timestamps: Array<Long>?,
         @RequestParam(value = "title", required = false) title: String?,
-        @RequestParam(value = "stabilize", defaultValue = "false", required = false) stabilize: Boolean): ResponseEntity<JobStatusResponse> {
+        @RequestParam(value = "stabilize", defaultValue = "false", required = false) stabilize: Boolean,
+        @RequestParam(value = "sortByTimestamp", defaultValue = "false", required = false) sortByTimestamp: Boolean = false): ResponseEntity<JobStatusResponse> {
 
         // Generate a unique Temp folder location
         val jobId = UUID.randomUUID().toString()
-        val tmpDir = fileService.saveFilesToTemp(jobId, files)
+        val orderedFiles = if (sortByTimestamp && timestamps != null && timestamps.size == files.size) {
+            files.indices
+                .sortedBy { timestamps[it] }
+                .map { files[it] }
+                .toTypedArray()
+        } else {
+            files
+        }
+        val orderedTimestamps = if (sortByTimestamp && timestamps != null && timestamps.size == files.size) {
+            files.indices.sortedBy { timestamps[it] }.map { timestamps[it] }.toTypedArray()
+        } else {
+            timestamps
+        }
 
-        val timestampsStr: String = timestamps?.joinToString(",") ?: ""
+        val storageFilenames = orderedFiles.mapIndexed { index, file ->
+            "${UUID.randomUUID()}_${FileUtils.sanitizeFilename(file.originalFilename ?: "video_$index.mp4") }"
+        }
+        val tmpDir = fileService.saveFilesToTemp(jobId, orderedFiles, storageFilenames)
+        val originalFilenames = storageFilenames.joinToString(",")
+
+        val timestampsStr: String = orderedTimestamps?.joinToString(",") ?: ""
 
         val params = JobParametersBuilder()
             .addLong("fileCount", files.size.toLong())
             .addString("timestamps", timestampsStr)
             .addString("title", title.orEmpty())
             .addString("fileDirectory", tmpDir)
+            .addString("originalFilenames", originalFilenames)
             .addString("stabilize", java.lang.String.valueOf(stabilize))
+            .addString("sortByTimestamp", java.lang.String.valueOf(sortByTimestamp))
             .addLong("launchTime", System.currentTimeMillis()) // Ensures job uniqueness
             .toJobParameters()
         logger.info{"Launching with params: ${params.parameters()}"}

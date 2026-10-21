@@ -41,12 +41,12 @@ class VideoBatchConfig {
     @Bean
     fun processFilesStep(
         jobRepository: JobRepository,
-        indexReader: ListItemReader<Int>,
-        ffmpegProcessor: ItemProcessor<Int, Int>,
-        noOpWriter: ItemWriter<Int>
+        indexReader: ListItemReader<String>,
+        ffmpegProcessor: ItemProcessor<String, String>,
+        noOpWriter: ItemWriter<String>
     ): Step {
         return StepBuilder("processFilesStep", jobRepository)
-            .chunk<Int, Int>(1) // Process 1 file at a time
+            .chunk<String, String>(1)
             .reader(indexReader)
             .processor(ffmpegProcessor)
             .writer(noOpWriter)
@@ -55,12 +55,12 @@ class VideoBatchConfig {
     @Bean
     fun buildTimestampStep(
         jobRepository: JobRepository,
-        indexReader: ListItemReader<Int>,
-        timestampProcessor: ItemProcessor<Int, Int>,
-        noOpWriter: ItemWriter<Int>
+        indexReader: ListItemReader<String>,
+        timestampProcessor: ItemProcessor<String, String>,
+        noOpWriter: ItemWriter<String>
     ): Step {
         return StepBuilder("buildTimestampStep", jobRepository)
-            .chunk<Int, Int>(1)
+            .chunk<String, String>(1)
             .reader(indexReader)
             .processor(timestampProcessor)
             .writer(noOpWriter)
@@ -69,10 +69,8 @@ class VideoBatchConfig {
 
     @Bean
     @StepScope
-    fun indexReader(jobConfig: VideoJobContext): ListItemReader<Int> {
-        val indices: MutableList<Int> = ArrayList()
-        for (i in 0 until jobConfig.fileCount) indices.add(i.toInt())
-        return ListItemReader(indices)
+    fun indexReader(jobConfig: VideoJobContext): ListItemReader<String> {
+        return ListItemReader(jobConfig.originalFilenames)
     }
 
     @Bean
@@ -80,11 +78,10 @@ class VideoBatchConfig {
     fun timestampProcessor(
         videoJobContext: VideoJobContext,
         timestampService: TimestampService
-    ): FunctionItemProcessor<Int, Int> {
-        return FunctionItemProcessor { index: Int ->
-            timestampService.buildTimestamps(videoJobContext, index)
-            // Return the index to pass to the writer (not used)
-            index
+    ): FunctionItemProcessor<String, String> {
+        return FunctionItemProcessor { filename: String ->
+            timestampService.buildTimestamps(videoJobContext, filename)
+            filename
         }
     }
     @Bean
@@ -92,17 +89,16 @@ class VideoBatchConfig {
     fun ffmpegProcessor(
         videoJobContext: VideoJobContext,
         videoService: VideoService
-    ): FunctionItemProcessor<Int, Int> {
-        return FunctionItemProcessor { index: Int ->
-            videoService.preprocess(videoJobContext, index)
-            // Return the index to pass to the writer (not used)
-            index
+    ): FunctionItemProcessor<String, String> {
+        return FunctionItemProcessor { filename: String ->
+            videoService.preprocess(videoJobContext, filename)
+            filename
         }
     }
 
     @Bean
-    fun noOpWriter(): ItemWriter<Int> {
-        return ItemWriter { _: Chunk<out Int>? -> }
+    fun noOpWriter(): ItemWriter<String> {
+        return ItemWriter { _: Chunk<out String>? -> }
     }
 
     @Bean
