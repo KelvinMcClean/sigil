@@ -22,7 +22,7 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         logger.info { "Processing file: ${file.name}" }
         val inputFilePath = filename
         val outputFilePath = "processed_${filename}"
-        val trfFilePath = "transforms_${filename.replace(".mp4", ".trf")}"
+        val trfFilePath = "transforms_${filename.replace(".mp4", ".trf")}" 
         // Initialize the base filter string
         val filterGraph = StringBuilder()
 
@@ -36,8 +36,9 @@ class VideoService(val timestampService: TimestampService, val fileService: File
             logger.info { "Stabilization transform added to filtergraph for file: ${file.name}" }
         }
         // Add the rest of the standard filters (scaling, padding, and text)
-        filterGraph.append("scale=1920:1080:force_original_aspect_ratio=decrease,")
-            .append("pad=1920:1080:(ow-iw)/2:(oh-ih)/2,")
+        val (outputWidth, outputHeight) = selectOutputDimensions(videoJobContext, workingDir, filename)
+        filterGraph.append("scale=${outputWidth}:${outputHeight}:force_original_aspect_ratio=decrease,")
+            .append("pad=${outputWidth}:${outputHeight}:(ow-iw)/2:(oh-ih)/2,")
             .append("setsar=1")
 
         if (videoJobContext.filenameToTimestamp.isNotEmpty()) {
@@ -70,6 +71,35 @@ class VideoService(val timestampService: TimestampService, val fileService: File
         }
         logger.info { "Completed render for file: ${file.name}" }
     }
+
+    private fun selectOutputDimensions(context: VideoJobContext, workingDir: File, currentFilename: String): Pair<Int, Int> {
+        val filenames = (context.originalFilenames + currentFilename).distinct()
+        val aspectRatios = filenames.mapNotNull { name ->
+            if (!File(workingDir, name).isFile) return@mapNotNull null
+            runCatching { ffmpegUtils.getVideoDimensions(name, workingDir) }
+                .onFailure { logger.warn(it) { "Unable to inspect dimensions for $name" } }
+                .getOrNull()
+                ?.let { (width, height) -> width.toDouble() / height }
+        }.sorted()
+
+        // A shared canvas is required because the processed clips are concatenated with stream copy.
+        // Use the widest input framing. This naturally keeps portrait output when every input is portrait.
+        val aspectRatio = aspectRatios.lastOrNull() ?: (16.0 / 9.0)
+        val longEdge = 1920.0
+        val width: Int
+        val height: Int
+        if (aspectRatio >= 1.0) {
+            width = longEdge.toInt()
+            height = evenDimension(longEdge / aspectRatio)
+        } else {
+            height = longEdge.toInt()
+            width = evenDimension(longEdge * aspectRatio)
+        }
+        logger.info { "Selected output canvas ${width}x${height} from ${aspectRatios.size} input videos (widest aspect ratio $aspectRatio)" }
+        return width to height
+    }
+
+    private fun evenDimension(value: Double): Int = (value.toInt().coerceAtLeast(2) / 2) * 2
 
     fun concat(videoJobContext: VideoJobContext) {
         val finalPath = fileService.getFinalPath()

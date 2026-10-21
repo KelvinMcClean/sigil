@@ -10,6 +10,22 @@ import kotlin.time.Instant
 @Component
 class FfmpegUtils {
 
+    fun getVideoDimensions(inputFilePath: String, workingDir: File): Pair<Int, Int> {
+        val ffmpeg = Ffmpeg(workingDir)
+        ffmpeg.add("-v", "error")
+        ffmpeg.add("-select_streams", "v:0")
+        ffmpeg.add("-show_entries", "stream=width,height")
+        ffmpeg.add("-of", "csv=s=x:p=0")
+        ffmpeg.add(inputFilePath)
+        val dimensions = ffmpeg.runProbe().trim().lineSequence().firstOrNull()
+            ?.split('x')
+            ?.mapNotNull { it.toIntOrNull() }
+        require(dimensions != null && dimensions.size == 2 && dimensions.all { it > 0 }) {
+            "Unable to read video dimensions for $inputFilePath"
+        }
+        return dimensions[0] to dimensions[1]
+    }
+
     fun preprocess(filterGraph: StringBuilder, inputFilePath: String, outputFilePath: String, workingDir: File): Int {
         val ffmpeg = Ffmpeg(workingDir)
         ffmpeg.add("-y")
